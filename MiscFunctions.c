@@ -1,9 +1,13 @@
 #include "MiscFunctions.h"
 #include "CustomTypes.h"
 
+
+extern volatile int * Switches;
+extern volatile int * Keys;
+
 //Function takes two input timestamps and returns calculated time value in desired output units
 //Units: 1 = min, 0 = s, -3 = ms, -6 = us
-float GetTime(int t2, int units)
+float GetTime(int t1, int t2, int units)
 {
 	//Define counter limit of 32-bits and counter frequency of 50M Hz
 	static int counterLim = 0x7FFFFFFF;
@@ -69,31 +73,31 @@ int CheckOn()
 //Function sets mode value based on input value from switch 1.
 //Mode 0: PID Control
 //Mode 1: Temperature Control
-void CheckMode(mode_t * modePTR)
+void CheckMode(Mode * modePtr)
 {
 	static int prev, pPrev;
 
 	//Mask input from switches input to select only switch_0
-	int switch_0 = *Switches & 0x1;
+	int switch_0 = * Switches & 0x1;
 
 	//Check if mode has just changed
 	if (switch_0 != prev && switch_0 != pPrev)
 	{
-		modePTR->changed = 1;
+		modePtr -> changed = 1;
 	}
 	else
 	{
-		modePTR->changed = 0;
+		modePtr -> changed = 0;
 	}
 
 	//Check value of switch and set mode value accordingly
 	if (switch_0 == 1 && prev == 1)
 	{
-		modePTR->mode = 1;
+		modePtr -> mode = 1;
 	}
 	else
 	{
-		modePTR->mode = 0;
+		modePtr -> mode = 0;
 	}
 
 	//Store previous values

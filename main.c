@@ -5,25 +5,32 @@
  *
  */
 
-//TODO check use of global variables and static variables is correct. Does it need to be global variable for
-//passing back from variable? If variable if used just in function should it always be static?
+//TODO check use of global variables and static variables is correct.
+//Does it need to be global variable for passing back from variable?
+//If variable if used just in function should it always be static?
 
 //Standard includes
 #include "EE30186.h"
 #include "system.h"
 #include "socal/socal.h"
 
-//Custom header files
+//Custom header files. Custom types and pointers must be included
+//first as they are used in other head files
+#include "CustomTypes.h"
 #include "FanFunctions.h"
 #include "DisplayFunctions.h"
 #include "MiscFunctions.h"
-#include "GlobalVariables.h"
 
 #include <inttypes.h>
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+
+#define key0 0xE
+#define key1 0xD
+#define key2 0xB
+#define key3 0x7
 
 //Assign pointers to address of peripheries
 volatile int * LEDs = (volatile int *)ALT_LWFPGA_LED_BASE;
@@ -35,11 +42,6 @@ volatile int * Hexb = (volatile int *)(ALT_LWFPGA_HEXB_BASE);
 volatile int * GPIOA = (volatile int *)(ALT_LWFPGA_GPIO_0A_BASE);
 volatile int * GPIOB = (volatile int *)(ALT_LWFPGA_GPIO_0B_BASE);
 
-#define key0 0xE
-#define key1 0xD
-#define key2 0xB
-#define key3 0x7
-
 //----------------------------------------------------- Variable Declaration -----------------------------------------------------//
 
 //Declare global struct 'speed' to store fan speed information
@@ -47,9 +49,6 @@ struct speed
 {
 	int demand, target, measured, temp, pid;
 };
-
-//--------------------------- Declare time variables
-extern int t1;
 
 //----------------------------------------------------- Main Function -----------------------------------------------------//
 
@@ -61,7 +60,10 @@ int main(int argc, char** argv)
 	#define maxRPM 2500;
 	static int isOn = 0;
 
-	//Initialise data direction register for GPIOA and set pin 3 of GPIO to be output
+	static int t1;
+
+	//Initialise data direction register for GPIOA and set pin 3 of GPIO
+	//to be output
 	volatile int * GPIOA_Ddr = GPIOA + 1;
 	*GPIOA_Ddr = 0x8;
 
@@ -75,18 +77,19 @@ int main(int argc, char** argv)
 		//Check on-off
 		if (isOn)
 		{
-			//---struct speed spd;
+			Speed speed;
 
 			//Read user input, change in speed demand
-			//---spd.demand = RotaryEncoder(GPIOA);
+			//---speed.demand = RotaryEncoder(GPIOA);
 
 			//Measure current fan speed
-			//---spd.measured = SpeedMeasure(Counter);
-			//---printf(", measuredSpeed: %d\n", spd.measured);
+			//---speed.measured = SpeedMeasure(Counter);
+			//---printf(", measuredSpeed: %d\n", speed.measured);
 
 			//Check current display status and display corresponding information
-			UpdateDisplay(Counter);
+			UpdateDisplay(t1, &speed);
 
+			printf("Not broken.");
 			/*
 			//Derive target speed
 			spd.target = SpeedControl(prevDemand, spd.demand, maxRPM);

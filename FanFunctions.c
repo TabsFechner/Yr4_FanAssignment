@@ -11,7 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-volatile int * GPIOA = (volatile int *)(ALT_LWFPGA_GPIO_0A_BASE);
+extern volatile int * GPIOA;
 
 //----------------------------------------------------- Fan Functions -----------------------------------------------------//
 
@@ -93,16 +93,17 @@ int RotaryEncoder(int *GPIOA)
 //Define function that takes void input and returns measurement of current fan speed
 int SpeedMeasure(int * Counter)
 {
+	static int prev, pPrev, prevSpeed, measuredSpeed;
+	static float tRev;
+
 	static int edgeCount = 0;
 	static int noEdges = 30;
-	static int t1, t2, prev, pPrev, prevSpeed, measuredSpeed; //prevSpeed, c
-	static float tRev;
 
 	//Define relationship between fan speed and number of edge counts limit in loop
 	noEdges = (prevSpeed/ 90) + 3;
 
 	//Get start time-stamp
-	t1 = *Counter;
+	int t1 = * Counter;
 	printf("t1: %d", t1);
 
 	//Detect X edges, where X = noEdges
@@ -131,7 +132,7 @@ int SpeedMeasure(int * Counter)
 	};
 
 	//Get end time-stamp
-	t2 = *Counter;
+	int t2 = * Counter;
 	printf(", t2: %d", t2);
 
 	//Check if fan stationary
@@ -142,7 +143,7 @@ int SpeedMeasure(int * Counter)
 	else //If not, calculate speed
 	{
 		//Calculate time for one fan revolution
-		tRev = 2*(GetTime(t2, 0))/ noEdges;
+		tRev = 2*(GetTime(t1, t2, 0))/ noEdges;
 
 		//Calculate RPM
 		measuredSpeed = 60/ tRev;

@@ -11,32 +11,39 @@
 #include <string.h>
 #include <stdlib.h>
 
-extern float time;
 static int nTime = 0;
+
+extern volatile int * Counter;
+extern volatile int * Hexa;
+extern volatile int * Hexb;
 
 //----------------------------------------------------- Display Functions -----------------------------------------------------//
 
 //Define function that updates diplay based on current status of display and recent system changes
-void UpdateDisplay(volatile int* Counter)
+void UpdateDisplay(int t1, Speed * speedPtr)
 {
-	static int t2, iDisp;
+	static int t2, time;
+	static int scrl = 0;
+	static int iDisp = 0;
+	static char infoStr[100];
 
 	//Check for time interval since last HEX display
-	t2 = *Counter;
+	t2 = * Counter;
 	//Returns time in seconds
-	time = GetTime(t2, 0);
+	time = GetTime(t1, t2, 0);
 	//Check for recent mode changed
 
-	mode_t *modePtr, mode;
-	modePtr = &mode;
+	Mode mode;
 
-	CheckMode(*modePtr);
+	CheckMode(&mode);
 
 	//Check for two conditions that initiate scrolling text
 	//Condition 1: Mode has been changed by user
-	if (modeChanged)
+	if (mode.changed)
 	{
-		iDisp = ScrollSetup(mode, 0);
+		//Pass infoStr char array as compiler automatically converts into pointer to first element
+		ScrollSetup(0, infoStr, &mode, speedPtr);
+		iDisp = 0;
 		scrl = 1;
 	}
 	//Condition 2: No user input for over 1 minute
@@ -45,12 +52,13 @@ void UpdateDisplay(volatile int* Counter)
 		//Increment 20s count
 		nTime++;
 		//Restart timer
-		t1 = *Counter;
+		t1 = * Counter;
 
 		//If 120s reached
 		if (nTime > 2)
 		{
-			iDisp = ScrollSetup(mode, 1);
+			ScrollSetup(1, infoStr, &mode, speedPtr);
+			iDisp = 0;
 			scrl = 1;
 			nTime = 0;
 		}
@@ -58,8 +66,17 @@ void UpdateDisplay(volatile int* Counter)
 
 	//Check for scrolling status and update display accordingly
 	if (scrl)
-	{
-		ScrollRun(iDisp);
+	{	//If character display value is greater than length of string
+		if (iDisp > strlen(infoStr))
+		{
+			ClearDisplay();
+
+			//Set scrolling to false
+			scrl = 0;
+			//Restart timer
+			t1 = * Counter;
+		}
+		ScrollRun(t1, time, &iDisp, Counter, infoStr);
 	}
 	else
 	{
@@ -242,109 +259,99 @@ void ClearDisplay()
 //-------------------- Display Functions: Scrolling Display
 
 //Define function that sets up scrolling of new string
-int ScrollSetup(int mode, int scrollOp)
+void ScrollSetup(int scrollOp, char * infoStrPtr, Mode * modePtr, Speed * speedPtr)
 {
 	ClearDisplay();
-
-	//Set current character index to zero
-	int iDisp = 0;
 
 	if (scrollOp == 0)
 	{
 		//Generate information string based on fan speed and mode
-		GetInfoString(pidSpeed, tempSpeed, mode);
+		GetInfoString(infoStrPtr, modePtr, speedPtr);
 	}
 	if (scrollOp == 1)
 	{
 		//Generate string based on random extract from Romeo and Juliet
-		GetJuliet();
+		GetJuliet(infoStrPtr);
 	}
-
-	return iDisp;
 }
 
 //Define function that generates information string depending on current mode set.
-void GetInfoString(int pid, int temp, int mode)
+void GetInfoString(char * infoStrPtr, Mode * modePtr, Speed * speedPtr)
 {
 	//Declare array
 	static char array[32];
 
 	//Store concatenated string in array depending on current mode
-	switch (mode)
+	switch (modePtr -> mode)
 	{
 		case 0:
-			sprintf(array, "%d      ", temp);
-			strcpy(infoStr, "MODE PID SPEED ");
-			strcat(infoStr, array);
+			sprintf(array, "%d      ", speedPtr -> temp);
+			strcpy(infoStrPtr, "MODE PID SPEED ");
+			strcat(infoStrPtr, array);
 			break;
 		case 1:
-			sprintf(array, "%d      ", pid);
-			strcpy(infoStr, "MODE TEMP SPEED ");
-			strcat(infoStr, array);
+			sprintf(array, "%d      ", speedPtr -> pid);
+			strcpy(infoStrPtr, "MODE TEMP SPEED ");
+			strcat(infoStrPtr, array);
 			break;
 	}
 }
 
 //Define function that randomly selects Romeo and Juliet extract and stores in infoStr array
-void GetJuliet()
+void GetJuliet(char * infoStrPtr)
 {
 	int x = rand();
 
 	switch (x % 9)
 	{
 		case 0:
-			strcpy(infoStr, "THESE VIOLENT DELIGHTS HAVE VIOLENT ENDS AND IN THEIR TRIUMP DIE LIKE FIRE AND POWDER      ");
+			strcpy(infoStrPtr, "THESE VIOLENT DELIGHTS HAVE VIOLENT ENDS AND IN THEIR TRIUMP DIE LIKE FIRE AND POWDER      ");
 			break;
 		case 1:
-			strcpy(infoStr, "MY BOUNTY IS AS BOUNDLESS AS THE SEA MY LOVE AS DEEP      ");
+			strcpy(infoStrPtr, "MY BOUNTY IS AS BOUNDLESS AS THE SEA MY LOVE AS DEEP      ");
 			break;
 		case 2:
-			strcpy(infoStr, "THUS WITH A KISS I DIE      ");
+			strcpy(infoStrPtr, "THUS WITH A KISS I DIE      ");
 			break;
 		case 3:
-			strcpy(infoStr, "PARTING IS SUCH SWEET SORROW THAT I SHALL SAY GOOD NIGHT TILL IT BE MORROW      ");
+			strcpy(infoStrPtr, "PARTING IS SUCH SWEET SORROW THAT I SHALL SAY GOOD NIGHT TILL IT BE MORROW      ");
 			break;
 		case 4:
-			strcpy(infoStr, "DO NOT SWEAR BY THE MOON FOR SHE CHANGES CONSTANTLY THEN YOUR LOVE WOULD ALSO CHANGE      ");
+			strcpy(infoStrPtr, "DO NOT SWEAR BY THE MOON FOR SHE CHANGES CONSTANTLY THEN YOUR LOVE WOULD ALSO CHANGE      ");
 			break;
 		case 5:
-			strcpy(infoStr, "DO YOU BITE YOUR THUMB AT US SIR      ");
+			strcpy(infoStrPtr, "DO YOU BITE YOUR THUMB AT US SIR      ");
 			break;
 		case 6:
-			strcpy(infoStr, "O SERPENT HEART HID WITH A FLOWERING FACE      ");
+			strcpy(infoStrPtr, "O SERPENT HEART HID WITH A FLOWERING FACE      ");
 			break;
 		case 7:
-			strcpy(infoStr, "LOVE IS A SMOKE MADE WITH THE FUME OF SIGHS      ");
+			strcpy(infoStrPtr, "LOVE IS A SMOKE MADE WITH THE FUME OF SIGHS      ");
 			break;
 	}
 }
 
 //Define function that writes scrolling text to hex displays
-void ScrollRun(int iDisp)
+int ScrollRun(int t1, int time, int * iDispPtr, volatile int * Counter, char * infoStrPtr)
 {
 	static int seg;
 
-	//If character display value is greater than length of string
-	if (iDisp > strlen(infoStr))
+	if (time > 0.1)
 	{
-		ClearDisplay();
+		//Encode current character to 7 segment signal
+		seg = CharEncoder(*(infoStrPtr+(* iDispPtr)));
 
-		//Set scrolling to false
-		scrl = 0;
-		//Restart timer
-		t1 = *Counter;
-	}
-	else if (time > 0.1)
-	{
-		//Encode character to 7 segment signal
-		seg = CharEncoder(infoStr[iDisp]);
 		//Shift character into scrolling display
 		ScrollOut(seg);
+
 		//Increment info string character index
-		iDisp++;
+		(* iDispPtr)++;
+
 		//Restart timer
-		t1 = *Counter;
+		t1 = * Counter;
 	}
+
+	return t1;
 }
 
 //Define function that writes encoded display message to HEX displays

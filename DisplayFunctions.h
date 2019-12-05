@@ -2,10 +2,12 @@
 #ifndef DISPLAYFUNCTIONS_H
 #define DISPLAYFUNCTIONS_H
 
+#include "CustomTypes.h"
+
 //----------------------------------------------------- Display Functions -----------------------------------------------------//
 
 //Declare function that updates diplay based on current status of display and recent system changes
-void UpdateDisplay(volatile int*);
+void UpdateDisplay(int, Speed *);
 
 //Declare function that takes multi digit value and encodes into active segments for hex display HexA
 int MultiDigitEncoder (int);
@@ -19,16 +21,16 @@ void ClearDisplay(void);
 //----------------------------------------------------- Scrolling Functions -----------------------------------------------------//
 
 //Declare function that sets up scrolling of new string
-void ScrollSetup(int);
+void ScrollSetup(int, char *, Mode *, Speed *);
 
 //Declare function that generates information string depending on current mode set.
-void GetInfoString(int, int);
+void GetInfoString(char *, Mode *, Speed *);
 
 //Declare function that randomly selects Romeo and Juliet extract and stores in infoStr array
-void GetJuliet(void);
+void GetJuliet(char *);
 
 //Declare function that writes scrolling text to hex displays
-void ScrollRun(void);
+int ScrollRun(int, int, int *, volatile int *, char *);
 
 //Declare function that writes encoded display message to HEX displays
 void ScrollOut(int);
