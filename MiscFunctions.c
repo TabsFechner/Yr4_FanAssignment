@@ -7,47 +7,44 @@ extern volatile int * Keys;
 
 //Function takes two input timestamps and returns calculated time value in desired output units
 //Units: 1 = min, 0 = s, -3 = ms, -6 = us
-float GetTime(int t1, int t2, int units)
+void GetTime(Time * timerPtr, int units)
 {
 	//Define counter limit of 32-bits and counter frequency of 50M Hz
 	static int counterLim = 0x7FFFFFFF;
 	static int counterFreq = 50000000;
 
 	static int noCounts, countsA, countsB;
-	static float time;
 
 	//Calculate number of counts between the two input timestamps
 	//Check for counter sign change
-	if (t1 > t2)
+	if (timerPtr -> t1 > timerPtr -> t2)
 	{
-		countsA = counterLim - t1;
+		countsA = counterLim - timerPtr -> t1;
 		//Assume time greater than counter limit will not be measured
-		countsB = counterLim + t2;
+		countsB = counterLim + timerPtr -> t2;
 		noCounts = countsA + countsB;
 	}
 	else
 	{
-		noCounts = t2 - t1;
+		noCounts = timerPtr -> t2 - timerPtr -> t1;
 	}
 
 	//Generate time value in desired output units
 	switch (units)
 	{
 	case 1:
-		time = (float)noCounts/ ((float)counterFreq * 60);
+		timerPtr -> time = (float)noCounts/ ((float)counterFreq * 60);
 		break;
 	case 0:
-		time = (float)noCounts/ (float)counterFreq;
+		timerPtr -> time = (float)noCounts/ (float)counterFreq;
 		break;
 	case -3:
-		time = ((float)noCounts/ (float)counterFreq) * 1000;
+		timerPtr -> time = ((float)noCounts/ (float)counterFreq) * 1000;
 		break;
 	case -6:
-		time = ((float)noCounts/ (float)counterFreq) * 1000000;
+		timerPtr -> time = ((float)noCounts/ (float)counterFreq) * 1000000;
 		break;
 	}
-
-	return time;
 }
 
 //Function inverts value of isOn if Key_0 has just been pressed.
@@ -81,23 +78,19 @@ void CheckMode(Mode * modePtr)
 	int switch_0 = * Switches & 0x1;
 
 	//Check if mode has just changed
-	if (switch_0 != prev && switch_0 != pPrev)
+	if (switch_0 == 1 && prev == 1 && switch_0 != pPrev)
 	{
 		modePtr -> changed = 1;
+		modePtr -> mode = 1;
+	}
+	else if (switch_0 == 0 && prev == 0 && switch_0 != pPrev)
+	{
+		modePtr -> changed = 1;
+		modePtr -> mode = 0;
 	}
 	else
 	{
 		modePtr -> changed = 0;
-	}
-
-	//Check value of switch and set mode value accordingly
-	if (switch_0 == 1 && prev == 1)
-	{
-		modePtr -> mode = 1;
-	}
-	else
-	{
-		modePtr -> mode = 0;
 	}
 
 	//Store previous values

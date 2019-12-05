@@ -12,6 +12,13 @@ typedef struct Speed_t{
 	int temp;
 	int demand;
 	int measured;
+	int target;
 }Speed;
+
+typedef struct Time_t{
+	int t1;
+	int t2;
+	float time;
+}Time;
 
 #endif

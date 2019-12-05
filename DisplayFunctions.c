@@ -11,8 +11,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-static int nTime = 0;
-
 extern volatile int * Counter;
 extern volatile int * Hexa;
 extern volatile int * Hexb;
@@ -20,21 +18,23 @@ extern volatile int * Hexb;
 //----------------------------------------------------- Display Functions -----------------------------------------------------//
 
 //Define function that updates diplay based on current status of display and recent system changes
-void UpdateDisplay(int t1, Speed * speedPtr)
+void UpdateDisplay(Time *  tDisplayPtr, Speed * speedPtr)
 {
-	static int t2, time;
+	static int nTime = 0;
 	static int scrl = 0;
 	static int iDisp = 0;
 	static char infoStr[100];
 
 	//Check for time interval since last HEX display
-	t2 = * Counter;
-	//Returns time in seconds
-	time = GetTime(t1, t2, 0);
-	//Check for recent mode changed
+	tDisplayPtr -> t2 = * Counter;
 
+	//Calculate time between to display timer readings
+	GetTime(tDisplayPtr, 0);
+
+	//Define struct for mode with custom type Mode
 	Mode mode;
 
+	//Check for recent mode changed
 	CheckMode(&mode);
 
 	//Check for two conditions that initiate scrolling text
@@ -43,44 +43,62 @@ void UpdateDisplay(int t1, Speed * speedPtr)
 	{
 		//Pass infoStr char array as compiler automatically converts into pointer to first element
 		ScrollSetup(0, infoStr, &mode, speedPtr);
+
+		//Set current character index to zero
 		iDisp = 0;
+
+		//Set scrolling status to true
 		scrl = 1;
 	}
-	//Condition 2: No user input for over 1 minute
-	else if (time > 20)
+	//Condition 2: No user input for over 20 s
+	else if (tDisplayPtr -> time > 20)
 	{
 		//Increment 20s count
 		nTime++;
+
 		//Restart timer
-		t1 = * Counter;
+		tDisplayPtr -> t1 = * Counter;
 
 		//If 120s reached
 		if (nTime > 2)
 		{
+			//Set up scrolling display
 			ScrollSetup(1, infoStr, &mode, speedPtr);
+
+			//Set current character index to zero
 			iDisp = 0;
+
+			//Set scrolling status to true
 			scrl = 1;
+
+			//Reset 20s counter to zero since no input for 120s condition has been met
 			nTime = 0;
 		}
 	}
 
 	//Check for scrolling status and update display accordingly
 	if (scrl)
-	{	//If character display value is greater than length of string
+	{
+		//Check for current character index being greater than length of info string
 		if (iDisp > strlen(infoStr))
 		{
 			ClearDisplay();
 
 			//Set scrolling to false
 			scrl = 0;
+
 			//Restart timer
-			t1 = * Counter;
+			tDisplayPtr -> t1 = * Counter;
 		}
-		ScrollRun(t1, time, &iDisp, Counter, infoStr);
+		else
+		{
+			//Update scrolling display
+			ScrollRun(tDisplayPtr, &iDisp, Counter, infoStr);
+		}
 	}
 	else
 	{
-		//Set HexA to result from multi-digit decoder
+		//Set HexA to result from multi-digit decoder of fan speed
 	}
 }
 
@@ -285,12 +303,12 @@ void GetInfoString(char * infoStrPtr, Mode * modePtr, Speed * speedPtr)
 	switch (modePtr -> mode)
 	{
 		case 0:
-			sprintf(array, "%d      ", speedPtr -> temp);
+			sprintf(array, "%d      ", speedPtr -> pid);
 			strcpy(infoStrPtr, "MODE PID SPEED ");
 			strcat(infoStrPtr, array);
 			break;
 		case 1:
-			sprintf(array, "%d      ", speedPtr -> pid);
+			sprintf(array, "%d      ", speedPtr -> temp);
 			strcpy(infoStrPtr, "MODE TEMP SPEED ");
 			strcat(infoStrPtr, array);
 			break;
@@ -332,11 +350,11 @@ void GetJuliet(char * infoStrPtr)
 }
 
 //Define function that writes scrolling text to hex displays
-int ScrollRun(int t1, int time, int * iDispPtr, volatile int * Counter, char * infoStrPtr)
+void ScrollRun(Time * tDisplayPtr, int * iDispPtr, volatile int * Counter, char * infoStrPtr)
 {
 	static int seg;
 
-	if (time > 0.1)
+	if (tDisplayPtr -> time > 0.1)
 	{
 		//Encode current character to 7 segment signal
 		seg = CharEncoder(*(infoStrPtr+(* iDispPtr)));
@@ -347,11 +365,11 @@ int ScrollRun(int t1, int time, int * iDispPtr, volatile int * Counter, char * i
 		//Increment info string character index
 		(* iDispPtr)++;
 
-		//Restart timer
-		t1 = * Counter;
-	}
+		printf("%d\n", *iDispPtr);
 
-	return t1;
+		//Restart timer
+		tDisplayPtr -> t1 = * Counter;
+	}
 }
 
 //Define function that writes encoded display message to HEX displays

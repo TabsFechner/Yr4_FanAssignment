@@ -10,7 +10,7 @@ int CheckOn(void);
 
 //Declare function that takes two input timestamps and returns calculated time value in desired output units
 //Units: 1 = min, 0 = s, -3 = ms, -6 = us
-float GetTime(int, int, int);
+void GetTime(Time *, int);
 
 //Function sets mode value based on input value from switch 1.
 //Mode 0: PID Control

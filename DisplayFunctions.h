@@ -7,7 +7,7 @@
 //----------------------------------------------------- Display Functions -----------------------------------------------------//
 
 //Declare function that updates diplay based on current status of display and recent system changes
-void UpdateDisplay(int, Speed *);
+void UpdateDisplay(Time *, Speed *);
 
 //Declare function that takes multi digit value and encodes into active segments for hex display HexA
 int MultiDigitEncoder (int);
@@ -30,7 +30,7 @@ void GetInfoString(char *, Mode *, Speed *);
 void GetJuliet(char *);
 
 //Declare function that writes scrolling text to hex displays
-int ScrollRun(int, int, int *, volatile int *, char *);
+void ScrollRun(Time *, int *, volatile int *, char *);
 
 //Declare function that writes encoded display message to HEX displays
 void ScrollOut(int);

@@ -2,42 +2,24 @@
 #ifndef FANFUNCTIONS_H
 #define FANFUNCTIONS_H
 
+#include "CustomTypes.h"
+
 //----------------------------------------------------- Fan Functions -----------------------------------------------------//
 
 //Declare function that takes void input and returns user input, change in speed demand, based on current and previous encoder readings
-int RotaryEncoder(int *);
+void RotaryEncoder(Speed *);
 
 //Declare function that takes void input and returns measurement of current fan speed
-int SpeedMeasure(int *);
+void SpeedMeasure(Speed *);
 
-/*
+
 //Declare function that returns user input, target fan speed, based  on input of previous demand speed and change in speed demanded as a percentage of max RPM.
-int SpeedControl(int prevDemand, int demand, int maxRPM)
-{
-	//Calculate new target speed
-	targetSpeed = prevDemand + (demand * maxRPM);
-
-	//Validate target speed is within range of fan
-	targetSpeed = SpeedValidate(targetSpeed);
-
-	return targetSpeed;
-}
+void SpeedControl(Speed *);
 
 //Declare function that takes in the desired speed and returns a speed value capped between zero and max fan rpm.
-int SpeedValidate(int desired)
-{
-	//Validate target range
-	if (desired > maxRPM)
-	{
-		desired = maxRPM;
-	}
-	else if (desired < 0)
-	{
-		desired = 0;
-	}
+int SpeedValidate(int);
 
-	return desired;
-}
+/*
 
 //Declare function that returns speed value based on: user input, target speed, and measured current fan speed
 int PID(int targetSpeed, int measuredSpeed)
