@@ -4,6 +4,7 @@
 #include "socal/socal.h"
 #include "DisplayFunctions.h"
 #include "MiscFunctions.h"
+#include "CustomTypes.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -27,16 +28,15 @@ void UpdateDisplay(volatile int* Counter)
 	time = GetTime(t2, 0);
 	//Check for recent mode changed
 
-	mode_t *modePtr, mode;
-	modePtr = &mode;
+	Mode mode;
 
-	CheckMode(*modePtr);
+	CheckMode(&mode);
 
 	//Check for two conditions that initiate scrolling text
 	//Condition 1: Mode has been changed by user
-	if (modeChanged)
+	if (mode.changed)
 	{
-		iDisp = ScrollSetup(mode, 0);
+		iDisp = ScrollSetup(mode.mode, 0);
 		scrl = 1;
 	}
 	//Condition 2: No user input for over 1 minute
@@ -50,7 +50,7 @@ void UpdateDisplay(volatile int* Counter)
 		//If 120s reached
 		if (nTime > 2)
 		{
-			iDisp = ScrollSetup(mode, 1);
+			iDisp = ScrollSetup(mode.mode, 1);
 			scrl = 1;
 			nTime = 0;
 		}

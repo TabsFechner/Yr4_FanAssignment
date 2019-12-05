@@ -14,6 +14,6 @@ float GetTime(int, int);
 //Function sets mode value based on input value from switch 1.
 //Mode 0: PID Control
 //Mode 1: Temperature Control
-void CheckMode(mode_t *);
+void CheckMode(Mode *);
 
 #endif

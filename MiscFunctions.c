@@ -69,7 +69,7 @@ int CheckOn()
 //Function sets mode value based on input value from switch 1.
 //Mode 0: PID Control
 //Mode 1: Temperature Control
-void CheckMode(mode_t * modePTR)
+void CheckMode(Mode * modePtr)
 {
 	static int prev, pPrev;
 
@@ -79,21 +79,21 @@ void CheckMode(mode_t * modePTR)
 	//Check if mode has just changed
 	if (switch_0 != prev && switch_0 != pPrev)
 	{
-		modePTR->changed = 1;
+		modePtr->changed = 1;
 	}
 	else
 	{
-		modePTR->changed = 0;
+		modePtr->changed = 0;
 	}
 
 	//Check value of switch and set mode value accordingly
 	if (switch_0 == 1 && prev == 1)
 	{
-		modePTR->mode = 1;
+		modePtr->mode = 1;
 	}
 	else
 	{
-		modePTR->mode = 0;
+		modePtr->mode = 0;
 	}
 
 	//Store previous values
