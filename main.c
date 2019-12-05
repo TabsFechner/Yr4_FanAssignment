@@ -60,7 +60,7 @@ int main(int argc, char** argv)
 	#define maxRPM 2500;
 	static int isOn = 0;
 
-	static int t1;
+	static Time tDisplay;
 
 	//Initialise data direction register for GPIOA and set pin 3 of GPIO
 	//to be output
@@ -68,7 +68,7 @@ int main(int argc, char** argv)
 	*GPIOA_Ddr = 0x8;
 
 	//Initialise counter start time variable t1 with first counter value
-	t1 = *Counter;
+	tDisplay.t1 = * Counter;
 
 	while (1)
 	{
@@ -79,17 +79,17 @@ int main(int argc, char** argv)
 		{
 			Speed speed;
 
+			//TODO update two function calls below with struct pointer mojo business
 			//Read user input, change in speed demand
-			//---speed.demand = RotaryEncoder(GPIOA);
+			//---speed.demand = RotaryEncoder();
 
 			//Measure current fan speed
-			//---speed.measured = SpeedMeasure(Counter);
+			//---speed.measured = SpeedMeasure(&speed);
 			//---printf(", measuredSpeed: %d\n", speed.measured);
 
 			//Check current display status and display corresponding information
-			UpdateDisplay(t1, &speed);
+			UpdateDisplay(&tDisplay, &speed);
 
-			printf("Not broken.");
 			/*
 			//Derive target speed
 			spd.target = SpeedControl(prevDemand, spd.demand, maxRPM);

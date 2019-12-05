@@ -2,13 +2,15 @@
 #ifndef FANFUNCTIONS_H
 #define FANFUNCTIONS_H
 
+#include "CustomTypes.h"
+
 //----------------------------------------------------- Fan Functions -----------------------------------------------------//
 
 //Declare function that takes void input and returns user input, change in speed demand, based on current and previous encoder readings
-int RotaryEncoder(int *);
+int RotaryEncoder();
 
 //Declare function that takes void input and returns measurement of current fan speed
-int SpeedMeasure(int *);
+void SpeedMeasure(Speed *);
 
 /*
 //Declare function that returns user input, target fan speed, based  on input of previous demand speed and change in speed demanded as a percentage of max RPM.

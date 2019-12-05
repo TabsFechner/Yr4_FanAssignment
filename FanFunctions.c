@@ -12,11 +12,13 @@
 #include <stdlib.h>
 
 extern volatile int * GPIOA;
+extern volatile int * Counter;
 
 //----------------------------------------------------- Fan Functions -----------------------------------------------------//
 
 //Define function that takes void input and returns user input, change in speed demand, based on current and previous encoder readings
-int RotaryEncoder(int *GPIOA)
+//TODO update with new pointer struct mojo business
+int RotaryEncoder()
 {
 	static int increment = 5;
 	static int  sum, prevSum;
@@ -91,24 +93,31 @@ int RotaryEncoder(int *GPIOA)
 }
 
 //Define function that takes void input and returns measurement of current fan speed
-int SpeedMeasure(int * Counter)
+void SpeedMeasure(Speed * speedPtr)
 {
-	static int prev, pPrev, prevSpeed, measuredSpeed;
-	static float tRev;
+	static int prevSpeed;
+	static Time tTacho;
 
+	//Declare and initialise number of edges counted in while loop
 	static int edgeCount = 0;
+
+	//Declare and define number of edges to be counter before exiting while loop
 	static int noEdges = 30;
 
 	//Define relationship between fan speed and number of edge counts limit in loop
 	noEdges = (prevSpeed/ 90) + 3;
 
 	//Get start time-stamp
-	int t1 = * Counter;
-	printf("t1: %d", t1);
+	tTacho.t1 = * Counter;
+	printf("t1: %d", tTacho.t1);
 
 	//Detect X edges, where X = noEdges
 	while (edgeCount < noEdges)
 	{
+		//Declare two variables to store previous tachometer readings in. Static will ensure this are not
+		//overwritten between loops
+		static int prev, pPrev;
+
 		//Shift and mask input from GPIO to get to tachometer input
 		int tacho = *GPIOA >> 1 & 0x1;
 
@@ -132,28 +141,30 @@ int SpeedMeasure(int * Counter)
 	};
 
 	//Get end time-stamp
-	int t2 = * Counter;
-	printf(", t2: %d", t2);
+	tTacho.t2 = * Counter;
+	printf(", t2: %d", tTacho.t2);
 
 	//Check if fan stationary
 	if (noEdges == 0)
 	{
-		measuredSpeed = 0;
+		speedPtr -> measured = 0;
 	}
 	else //If not, calculate speed
 	{
+		//Get time based on timer struct specific to timing tacho signal edges. Time returned in seconds
+		GetTime(&tTacho, 0);
+
 		//Calculate time for one fan revolution
-		tRev = 2*(GetTime(t1, t2, 0))/ noEdges;
+		float tRev = 2*(tTacho.time)/ noEdges;
+
+		printf(", tRev: %f,", tRev);
 
 		//Calculate RPM
-		measuredSpeed = 60/ tRev;
+		speedPtr -> measured = 60/ tRev;
 	}
 
-	printf(", tRev: %f,", tRev);
-
 	//Assign previous speed value and return measured speed
-	prevSpeed = measuredSpeed;
-	return measuredSpeed;
+	prevSpeed = speedPtr -> measured;
 }
 
 /*
