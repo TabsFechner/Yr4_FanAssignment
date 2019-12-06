@@ -14,10 +14,12 @@ void SpeedMeasure(Speed *);
 
 
 //Declare function that returns user input, target fan speed, based  on input of previous demand speed and change in speed demanded as a percentage of max RPM.
-void SpeedControl(Speed *);
+void SetTarget(Speed *);
 
 //Declare function that takes in the desired speed and returns a speed value capped between zero and max fan rpm.
 int SpeedValidate(int);
+
+void SetPWM(Time *, Speed *);
 
 /*
 
@@ -70,10 +72,6 @@ int Temperature()
 	return tempSpeed;
 }
 
-int PWM(int switch_0)
-{
-//	return pwmSignal;
-}
 */
 
 #endif

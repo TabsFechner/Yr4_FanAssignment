@@ -58,15 +58,18 @@ int main(int argc, char** argv)
 	EE30186_Start();
 	static int isOn = 0;
 
+	//Initialise display counter start time variable t1 with first counter value
 	static Time tDisplay;
+	tDisplay.t1 = * Counter;
+
+	//Initialise PWM signal counter start time variable t1 with first counter value
+	static Time tPWM;
+	tPWM.t1 = * Counter;
 
 	//Initialise data direction register for GPIOA and set pin 3 of GPIO
 	//to be output
 	volatile int * GPIOA_Ddr = GPIOA + 1;
 	*GPIOA_Ddr = 0x8;
-
-	//Initialise counter start time variable t1 with first counter value
-	tDisplay.t1 = * Counter;
 
 	//Define struct of custom type speed to store fan speed data
 	Speed speed;
@@ -89,10 +92,11 @@ int main(int argc, char** argv)
 			//Read user input, change in speed demand
 			RotaryEncoder(&speed);
 
-			//TODO improve name of below function
-			//Derive target speed
-			SpeedControl(&speed);
-			printf("Fan target speed: %d\n", speed.target);
+			//Set target speed
+			SetTarget(&speed);
+
+			//Generate PWM signal to drive fan output
+			SetPWM(&tPWM, &speed);
 
 			/*
 			//Calculate fan speed for mode: PID control
@@ -104,9 +108,6 @@ int main(int argc, char** argv)
 
 			//Check current display status and display corresponding information
 			UpdateDisplay(&tDisplay, &speed);
-
-			//Set 3rd pin (4th bit) of GPIO register to 1
-			*GPIOA = 0x8;
 
 			isOn = CheckOn();
 		}
@@ -125,33 +126,6 @@ int main(int argc, char** argv)
 }
 
 /*
-//Function returns user input, target fan speed, based  on input of previous demand speed and change in speed demanded as a percentage of max RPM.
-int SpeedControl(int prevDemand, int demand, int maxRPM)
-{
-	//Calculate new target speed
-	targetSpeed = prevDemand + (demand * maxRPM);
-
-	//Validate target speed is within range of fan
-	targetSpeed = SpeedValidate(targetSpeed);
-
-	return targetSpeed;
-}
-
-//Function takes in the desired speed and returns a speed value capped between zero and max fan rpm.
-int SpeedValidate(int desired)
-{
-	//Validate target range
-	if (desired > maxRPM)
-	{
-		desired = maxRPM;
-	}
-	else if (desired < 0)
-	{
-		desired = 0;
-	}
-
-	return desired;
-}
 
 //Function returns speed value based on: user input, target speed, and measured current fan speed
 int PID(int targetSpeed, int measuredSpeed)

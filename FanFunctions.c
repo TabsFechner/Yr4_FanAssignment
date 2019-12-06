@@ -24,7 +24,7 @@ static int maxRpm = 2400;
 //demand, based on current and previous encoder readings
 void RotaryEncoder(Speed * speedPtr)
 {
-	static int increment = 5;
+	static int increment = 10;
 	static int sum, prevSum;
 
 	//Declare and initialise variable n used to ensure only one demand signal is sent per click of encoder.
@@ -90,12 +90,12 @@ void RotaryEncoder(Speed * speedPtr)
 
 	if (n > 3)
 	{
-		speedPtr -> demand = increment;
+		speedPtr -> demand = -increment;
 		n = 0;
 	}
 	else if (n < -3)
 	{
-		speedPtr -> demand = -increment;
+		speedPtr -> demand = increment;
 		n = 0;
 	}
 	else
@@ -124,7 +124,6 @@ void SpeedMeasure(Speed * speedPtr)
 
 	//Get start time-stamp
 	tTacho.t1 = * Counter;
-	printf("t1: %d", tTacho.t1);
 
 	//Detect X edges, where X = noEdges
 	while (edgeCount < noEdges)
@@ -157,7 +156,6 @@ void SpeedMeasure(Speed * speedPtr)
 
 	//Get end time-stamp
 	tTacho.t2 = * Counter;
-	printf(", t2: %d", tTacho.t2);
 
 	//Check if fan stationary
 	if (noEdges == 0)
@@ -172,8 +170,6 @@ void SpeedMeasure(Speed * speedPtr)
 		//Calculate time for one fan revolution
 		float tRev = 2*(tTacho.time)/ noEdges;
 
-		printf(", tRev: %f,", tRev);
-
 		//Calculate RPM
 		speedPtr -> measured = 60/ tRev;
 	}
@@ -183,12 +179,12 @@ void SpeedMeasure(Speed * speedPtr)
 }
 
 //Define function that returns user input, target fan speed, based  on input of previous demand speed and change in speed demanded as a percentage of max RPM.
-void SpeedControl(Speed * speedPtr)
+void SetTarget(Speed * speedPtr)
 {
 	static int prev;
 
 	//Calculate new target speed
-	speedPtr -> target = prev + (speedPtr -> demand * maxRpm)/ 100;
+	speedPtr -> target = prev + (speedPtr -> demand * maxRpm)/100;
 
 	//Validate target speed is within range of fan
 	speedPtr -> target = SpeedValidate(speedPtr -> target);
@@ -204,12 +200,49 @@ int SpeedValidate(int spd)
 	{
 		spd = maxRpm;
 	}
-	else if (spd < 0)
+	else if (spd < maxRpm * 0.2)
 	{
-		spd = 0;
+		spd = maxRpm * 0.2;
 	}
 
 	return spd;
+}
+
+void SetPWM(Time * tPWMPtr, Speed * speedPtr)
+{
+	//Define signal period as 10ms
+	int T = 100;
+
+	//Calculate duty cycle
+	float D = (float)speedPtr -> target / maxRpm;
+
+	//Set second timer reading
+	tPWMPtr -> t2 = * Counter;
+
+	//Time returned in milliseconds
+	GetTime(tPWMPtr, -3);
+
+	//Set fan to ON if current time is less than time on period, where time on period
+	//is duty cycle times signal time period
+	if (tPWMPtr -> time <= D * T)
+	{
+		//Set 3rd pin (4th bit), fan output, of GPIO register to 1
+		*GPIOA = 0x8;
+	}
+	else if (tPWMPtr -> time >= T)
+	{
+		//Restart timer if signal period reached
+		tPWMPtr -> t1 = * Counter;
+	}
+	else
+	{
+		//Set GPIO register to all zeros
+		*GPIOA = 0x0;
+	}
+
+	float a = tPWMPtr -> time;
+	int b = speedPtr -> target;
+	printf("Target: %d, t_on: %fms, D: %f, time: %fms\n", b, (D*T), D, a);
 }
 
 /*
@@ -261,9 +294,8 @@ int Temperature()
 
 	return tempSpeed;
 }
-
-int PWM(int switch_0)
-{
-//	return pwmSignal;
-}
 */
+
+
+
+
