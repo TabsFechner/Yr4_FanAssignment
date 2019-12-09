@@ -10,7 +10,7 @@
 void UpdateDisplay(Time *, Speed *);
 
 //Declare function that takes multi digit value and encodes into active segments for hex display HexA
-int MultiDigitEncoder (int);
+int MultiDigitEncoder (Speed *);
 
 //Declare function that takes char from info string and encodes into active segments for hex display
 int CharEncoder(char);

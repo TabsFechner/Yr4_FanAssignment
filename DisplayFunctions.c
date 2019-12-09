@@ -98,42 +98,47 @@ void UpdateDisplay(Time *  tDisplayPtr, Speed * speedPtr)
 	}
 	else
 	{
-		//Set HexA to result from multi-digit decoder of fan speed
+		*Hexa = MultiDigitEncoder(speedPtr);
 	}
 }
 
 //Define function that takes multi digit value and encodes into active segments for hex display HexA
-int MultiDigitEncoder (int value)
+int MultiDigitEncoder (Speed * speedPtr)
 {
+	int value = speedPtr -> measured;
+
 	//Define empty display value to return
 	int returnValue = 0xffffffff;
 
 	// We need to be able to keep track of which digit in the number we are dealing
 	// with
-	int CurrentDigit = 0;
+	int currentDigit = 0;
 
 	// As we extract the digits we need a temporary variable to put the values into
-	int SingleDigitDisplay;
+	int seg;
 
 	//Loop up through the digits in the number
 	do
 	{
+		char x [1] = {};
+		x[0] = value % 10;
+
 		// Extract the bottom digit
-		SingleDigitDisplay = (value % 10);
+		seg = CharEncoder(x[0]);
 
 		// adjust the input value to reflect the extraction of the bottom digit
 		value /= 10;
 
 		// Clear the space that we are going to put the decoder result into
-		returnValue = returnValue & ~(0xFF << (CurrentDigit * 8));
+		returnValue = returnValue & ~(0xFF << (currentDigit * 8));
 
 		// Shift the single decoded digit to the right place in the int and insert
 		// it
-		returnValue = returnValue |  (SingleDigitDisplay << (CurrentDigit * 8));
+		returnValue = returnValue |  (seg << (currentDigit * 8));
 
 		// Update the digit postion so that if the value is non-zero we put the
 		// next digit 8 bits further to the left.
-		CurrentDigit++;
+		currentDigit++;
 	}while (value > 0);
 
 	// Pass back the multi-digit decoded result.
@@ -378,6 +383,8 @@ void ScrollOut(int hexValue)
 	//Define empty display value to return
 	static int outA = 0xffffffff;
 	static int outB = 0xffff;
+
+	//Declare variables to store current values from HEX display registers
 	static int curA;
 	curA = *Hexa;
 	static int curB;

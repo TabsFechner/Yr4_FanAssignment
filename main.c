@@ -58,24 +58,28 @@ int main(int argc, char** argv)
 	EE30186_Start();
 	static int isOn = 0;
 
-	//Initialise display counter start time variable t1 with first counter value
+	//Initialise timers start time variable t1 with first counter value
+	//Display timer
 	static Time tDisplay;
 	tDisplay.t1 = * Counter;
 
-	//Initialise PWM signal counter start time variable t1 with first counter value
+	//PWM timer
 	static Time tPWM;
 	tPWM.t1 = * Counter;
+
+	//Tacho timer
+	static Time tTacho;
+	tTacho.t1 = * Counter;
+
+	//Define struct of custom type speed to store fan speed data and
+	//initialise fan speed target as zero
+	Speed speed;
+	speed.target = 0;
 
 	//Initialise data direction register for GPIOA and set pin 3 of GPIO
 	//to be output
 	volatile int * GPIOA_Ddr = GPIOA + 1;
 	*GPIOA_Ddr = 0x8;
-
-	//Define struct of custom type speed to store fan speed data
-	Speed speed;
-
-	//Initialise fan speed target as zero
-	speed.target = 0;
 
 	while (1)
 	{
@@ -84,12 +88,7 @@ int main(int argc, char** argv)
 		//Check on-off
 		if (isOn)
 		{
-			//TODO update function call below with struct pointer mojo business
-			//Measure current fan speed
-			//SpeedMeasure(&speed);
-			//printf(", measuredSpeed: %d\n", speed.measured);
-
-			//Read user input, change in speed demand
+			//Read user input as demand for change in speed
 			RotaryEncoder(&speed);
 
 			//Set target speed
@@ -98,6 +97,9 @@ int main(int argc, char** argv)
 			//Generate PWM signal to drive fan output
 			SetPWM(&tPWM, &speed);
 
+			//Measure current fan speed
+			SpeedMeasure(&tTacho, &speed);
+
 			/*
 			//Calculate fan speed for mode: PID control
 			spd.pid = PID(spd.target, spd.measured);
@@ -105,7 +107,7 @@ int main(int argc, char** argv)
 			spd.temp = temperature();
 			prevDemand = spd.demand;
 			*/
-
+			speed.measured = 100;
 			//Check current display status and display corresponding information
 			UpdateDisplay(&tDisplay, &speed);
 
