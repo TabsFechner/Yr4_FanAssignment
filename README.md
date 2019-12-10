@@ -14,8 +14,8 @@ GENERAL USAGE
           
   - Modes of Use
   
-        - There are three modes of operation used to control the fan: open-loop control, closed-loop 
-          control and temperature control. These are outlined in more detail below.
+        - There are two modes of operation used to control the fan: open-loop control and closed-loop 
+          control. These are outlined in more detail below.
 
   - Software Outline
   
@@ -82,7 +82,7 @@ USER MANUAL
   
   - Switch 0 and switch 1 are used to change the mode of operation.
   
-        - If switch 1 is raised, the system will be in temperature mode.
+        - If switch 1 is raised, the system will be in temperature mode, which is not implemented yet.
         - With switch 1 low, you can toggle between closed loop and open loop control using switch 0.
         
   - Key 0 is used to turn off the system.
