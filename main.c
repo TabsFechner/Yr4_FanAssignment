@@ -1,36 +1,41 @@
 /*
  *
- * Fan Control:		Integrated Engineering, EE30186
- * Date:			25.11.2019
+ *      Fan Control:	Integrated Engineering, EE30186
+ *       Start Date:	25.11.2019
+ *  Submission Date:	12.12.2019
  *
  */
 
-//TODO check use of global variables and static variables is correct.
-//Does it need to be global variable for passing back from variable?
-//If variable if used just in function should it always be static?
+//TODO PID control
+//TODO Use third mode to allow for setting to open loop control also
+//TODO Insert some error catches
+//TODO Improve speed measured stability when writing to HEX and system cycle period increases
+//TODO (Temp)
+//TODO Readme
+//Use of structs and pointers to structs
+//Emphasis on minimal appearance of main function while loop
+//Custom types: can have multiple counters - no need for delay, only to set counters in specified struct
+//TODO Check commenting
 
-//Standard includes
+//---------------------------------------------------------- Setup --------------------------------------------------------//
+
+//Include given assignment and system header files
 #include "EE30186.h"
 #include "system.h"
 #include "socal/socal.h"
 
-//Custom header files. Custom types and pointers must be included
-//first as they are used in other head files
+//Include custom header files
 #include "CustomTypes.h"
 #include "FanFunctions.h"
 #include "DisplayFunctions.h"
 #include "MiscFunctions.h"
 
+//Include libraries
 #include <inttypes.h>
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
-
-#define key0 0xE
-#define key1 0xD
-#define key2 0xB
-#define key3 0x7
 
 //Assign pointers to address of peripheries
 volatile int * LEDs = (volatile int *)ALT_LWFPGA_LED_BASE;
@@ -39,16 +44,7 @@ volatile int * Keys = (volatile int *)(ALT_LWFPGA_KEY_BASE);
 volatile int * Counter = (volatile int *)(ALT_LWFPGA_COUNTER_BASE);
 volatile int * Hexa = (volatile int *)(ALT_LWFPGA_HEXA_BASE);
 volatile int * Hexb = (volatile int *)(ALT_LWFPGA_HEXB_BASE);
-volatile int * GPIOA = (volatile int *)(ALT_LWFPGA_GPIO_0A_BASE);
-volatile int * GPIOB = (volatile int *)(ALT_LWFPGA_GPIO_0B_BASE);
-
-//----------------------------------------------------- Variable Declaration -----------------------------------------------------//
-
-//Declare global struct 'speed' to store fan speed information
-struct speed
-{
-	int demand, target, measured, temp, pid;
-};
+volatile int * GPIOA = (volatile int *)(ALT_LWFPGA_GPIO_1A_BASE);
 
 //----------------------------------------------------- Main Function -----------------------------------------------------//
 
@@ -58,7 +54,9 @@ int main(int argc, char** argv)
 	EE30186_Start();
 	static int isOn = 0;
 
-	//Initialise timers start time variable t1 with first counter value
+	//------------------------------- Initialise timers ---------------------------------
+
+	//Set start time variable t1 with first counter value
 	//Display timer
 	static Time tDisplay;
 	tDisplay.t1 = * Counter;
@@ -71,20 +69,27 @@ int main(int argc, char** argv)
 	static Time tTacho;
 	tTacho.t1 = * Counter;
 
+
+	//------------------------- Initialise other custom structs -------------------------
+
 	//Define struct of custom type speed to store fan speed data and
 	//initialise fan speed target as zero
 	Speed speed;
 	speed.target = 0;
+
+	//Define stuct of custom type Mode to store current mode and mode change flag
+	Mode mode;
+	mode.mode = 0;
 
 	//Initialise data direction register for GPIOA and set pin 3 of GPIO
 	//to be output
 	volatile int * GPIOA_Ddr = GPIOA + 1;
 	*GPIOA_Ddr = 0x8;
 
+	//------------------------------- Enter while loop ----------------------------------
+
 	while (1)
 	{
-		*LEDs = *Switches;
-
 		//Check on-off
 		if (isOn)
 		{
@@ -94,22 +99,24 @@ int main(int argc, char** argv)
 			//Set target speed
 			SetTarget(&speed);
 
-			//Generate PWM signal to drive fan output
-			SetPWM(&tPWM, &speed);
-
 			//Measure current fan speed
 			SpeedMeasure(&tTacho, &speed);
 
-			/*
-			//Calculate fan speed for mode: PID control
-			spd.pid = PID(spd.target, spd.measured);
-			//Calculate fan speed for mode: temperature
-			spd.temp = temperature();
-			prevDemand = spd.demand;
-			*/
-			speed.measured = 100;
-			//Check current display status and display corresponding information
-			UpdateDisplay(&tDisplay, &speed);
+			if (mode.mode == 1)
+			{
+				//Calculate fan speed for mode: PID control
+				PID(&speed);
+			}
+			else if (mode.mode >= 2)
+			{
+				//Implement temperature mode
+			}
+
+			//Generate PWM signal to drive fan output
+			SetPWM(&tPWM, &speed, &mode);
+
+			//Check current display status and update display accordingly
+			UpdateDisplay(&tDisplay, &speed, &mode);
 
 			isOn = CheckOn();
 		}
@@ -128,28 +135,6 @@ int main(int argc, char** argv)
 }
 
 /*
-
-//Function returns speed value based on: user input, target speed, and measured current fan speed
-int PID(int targetSpeed, int measuredSpeed)
-{
-	static int diff, prop, deriv, integ;
-
-	//Set coefficients
-	prop = 0.5;
-	deriv = 4;
-	integ = 2;
-
-	//Calculate difference in target speed and measured speed
-	diff = targetSpeed - measuredSpeed;
-
-	//Calculate resulting output speed based on PID control
-	pidSpeed = prop + deriv + integ;
-	//Validate target speed is within range of fan
-	pidSpeed = SpeedValidate(pidSpeed);
-
-	return pidSpeed;
-}
-
 //Function returns speed value based on: temperature sensor
 int Temperature()
 {
@@ -177,35 +162,4 @@ int Temperature()
 
 	return tempSpeed;
 }
-
-int PWM(int switch_0)
-{
-//	return pwmSignal;
-}
-
-int SpeedSet(int prevDemand, int direction) //Not needed in closed-loop control
-{
-	//Adjust duty based on direction
-	if (direction == 0) //Clockwise
-	{
-		demand = prevDemand + (maxRPM*0.05);
-	}
-	else //Anti-clockwise
-	{
-		duty -= 5;
-	}
-
-	//Validate duty range
-	if (duty > 100)
-	{
-		duty = 100;
-	}
-	else if (duty < 0)
-	{
-		duty = 0;
-	}
-
-	return duty;
-}
-
 */

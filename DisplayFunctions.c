@@ -18,12 +18,13 @@ extern volatile int * Hexb;
 //----------------------------------------------------- Display Functions -----------------------------------------------------//
 
 //Define function that updates diplay based on current status of display and recent system changes
-void UpdateDisplay(Time *  tDisplayPtr, Speed * speedPtr)
+void UpdateDisplay(Time *  tDisplayPtr, Speed * speedPtr, Mode * modePtr)
 {
 	static int nTime = 0;
 	static int scrl = 0;
 	static int iDisp = 0;
 	static char infoStr[100];
+	int displayValue, d1, d2;
 
 	//Check for time interval since last HEX display
 	tDisplayPtr -> t2 = * Counter;
@@ -31,18 +32,15 @@ void UpdateDisplay(Time *  tDisplayPtr, Speed * speedPtr)
 	//Calculate time between to display timer readings
 	GetTime(tDisplayPtr, 0);
 
-	//Define struct for mode with custom type Mode
-	Mode mode;
-
 	//Check for recent mode changed
-	CheckMode(&mode);
+	CheckMode(modePtr);
 
 	//Check for two conditions that initiate scrolling text
 	//Condition 1: Mode has been changed by user
-	if (mode.changed)
+	if (modePtr -> changed)
 	{
 		//Pass infoStr char array as compiler automatically converts into pointer to first element
-		ScrollSetup(0, infoStr, &mode, speedPtr);
+		ScrollSetup(0, infoStr, modePtr, speedPtr);
 
 		//Set current character index to zero
 		iDisp = 0;
@@ -60,10 +58,10 @@ void UpdateDisplay(Time *  tDisplayPtr, Speed * speedPtr)
 		tDisplayPtr -> t1 = * Counter;
 
 		//If 120s reached
-		if (nTime > 2)
+		if (nTime > 5)
 		{
 			//Set up scrolling display
-			ScrollSetup(1, infoStr, &mode, speedPtr);
+			ScrollSetup(1, infoStr, modePtr, speedPtr);
 
 			//Set current character index to zero
 			iDisp = 0;
@@ -98,15 +96,41 @@ void UpdateDisplay(Time *  tDisplayPtr, Speed * speedPtr)
 	}
 	else
 	{
-		*Hexa = MultiDigitEncoder(speedPtr);
+		switch(modePtr -> mode)
+		{
+			case 0:
+				d1 = CharEncoder('O');
+				d2 = CharEncoder('L');
+				//returnValue = returnValue & ~(0xFF << (currentDigit * 8));
+
+				//Decode 2-digit str for HexB
+				displayValue = speedPtr -> measured;
+				break;
+
+			case 1:
+				d1 = CharEncoder('C');
+				d2 = CharEncoder('L');
+				//Decode 2-digit str for HexB
+				displayValue = speedPtr -> measured;
+				break;
+
+			case 2:
+				//Implement temp
+				break;
+
+			case 3:
+				//Implement temp
+				break;
+		}
+
+		*Hexb = d2 | (d1 << 8);
+		*Hexa = MultiDigitEncoder(displayValue);
 	}
 }
 
 //Define function that takes multi digit value and encodes into active segments for hex display HexA
-int MultiDigitEncoder (Speed * speedPtr)
+int MultiDigitEncoder (int value)
 {
-	int value = speedPtr -> measured;
-
 	//Define empty display value to return
 	int returnValue = 0xffffffff;
 
@@ -120,10 +144,15 @@ int MultiDigitEncoder (Speed * speedPtr)
 	//Loop up through the digits in the number
 	do
 	{
+		//Define empty char array to store integers values as characters. Array defined
+		//as single digit enforces array boundaries and removes risk of using sprintf.
 		char x [1] = {};
-		x[0] = value % 10;
 
-		// Extract the bottom digit
+		//Append result from modulus calculation into array this ensures it is in
+		//the correct format for the char encoder.
+		sprintf(x, "%d", value % 10);
+
+		//Encode current digit to HEX value
 		seg = CharEncoder(x[0]);
 
 		// adjust the input value to reflect the extraction of the bottom digit
@@ -279,7 +308,7 @@ void ClearDisplay()
 	*Hexb = 0xffffffff;
 }
 
-//-------------------- Display Functions: Scrolling Display
+//----------------------------------------------- Display Functions: Scrolling Display --------------------------------------------------//
 
 //Define function that sets up scrolling of new string
 void ScrollSetup(int scrollOp, char * infoStrPtr, Mode * modePtr, Speed * speedPtr)
@@ -302,19 +331,29 @@ void ScrollSetup(int scrollOp, char * infoStrPtr, Mode * modePtr, Speed * speedP
 void GetInfoString(char * infoStrPtr, Mode * modePtr, Speed * speedPtr)
 {
 	//Declare array
-	static char array[32];
+	char array[32];
 
 	//Store concatenated string in array depending on current mode
 	switch (modePtr -> mode)
 	{
 		case 0:
-			sprintf(array, "%d      ", speedPtr -> pid);
-			strcpy(infoStrPtr, "MODE PID SPEED ");
+			sprintf(array, "%d      ", speedPtr -> target);
+			strcpy(infoStrPtr, modePtr -> description);
 			strcat(infoStrPtr, array);
 			break;
 		case 1:
+			sprintf(array, "%d      ", speedPtr -> pid);
+			strcpy(infoStrPtr, modePtr -> description);
+			strcat(infoStrPtr, array);
+			break;
+		case 2:
 			sprintf(array, "%d      ", speedPtr -> temp);
-			strcpy(infoStrPtr, "MODE TEMP SPEED ");
+			strcpy(infoStrPtr, modePtr -> description);
+			strcat(infoStrPtr, array);
+			break;
+		case 3:
+			sprintf(array, "%d      ", speedPtr -> temp);
+			strcpy(infoStrPtr, modePtr -> description);
 			strcat(infoStrPtr, array);
 			break;
 	}

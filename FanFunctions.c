@@ -15,7 +15,7 @@
 extern volatile int * GPIOA;
 extern volatile int * Counter;
 
-int maxRpm = 2400;
+int maxRpm = 2500;
 
 //----------------------------------------------------- Fan Functions -----------------------------------------------------//
 
@@ -170,21 +170,33 @@ int SpeedValidate(int spd)
 	{
 		spd = maxRpm;
 	}
-	else if (spd < maxRpm * 0.1)
+	else if (spd < maxRpm * 0.15)
 	{
-		spd = maxRpm * 0.1;
+		spd = maxRpm * 0.15;
 	}
 
 	return spd;
 }
 
-void SetPWM(Time * tPWMPtr, Speed * speedPtr)
+void SetPWM(Time * tPWMPtr, Speed * speedPtr, Mode * modePtr)
 {
 	//Define signal period as 50ms
 	int T = 50;
 
-	//Calculate duty cycle
-	float D = (float)speedPtr -> target / maxRpm;
+	//Declare duty-cycle variable
+	float D;
+
+	//Check for current mode set: 0 = PID control; 1 = Temp control
+	if (modePtr -> mode)
+	{
+		//Implement temp control mode
+		D = 0;
+	}
+	else
+	{
+		//Calculate duty cycle
+		D = (float)speedPtr -> pid / maxRpm;
+	}
 
 	//Set second timer reading
 	tPWMPtr -> t2 = * Counter;
@@ -211,28 +223,44 @@ void SetPWM(Time * tPWMPtr, Speed * speedPtr)
 	}
 }
 
-/*
 //Define function that returns speed value based on: user input, target speed, and measured current fan speed
-int PID(int targetSpeed, int measuredSpeed)
+void PID(Speed * speedPtr)
 {
-	static int diff, prop, deriv, integ;
+	//Declare variable to store previous error calculated
+	static float pErr = 0;
+	static float integ = 0;
 
-	//Set coefficients
-	prop = 0.5;
-	deriv = 4;
-	integ = 2;
+	//Set control coefficients
+	float Kp = 0.5;
+	float Kd = 4;
+	float Ki = 2;
 
 	//Calculate difference in target speed and measured speed
-	diff = targetSpeed - measuredSpeed;
+	int err = speedPtr -> target - speedPtr -> measured;
 
-	//Calculate resulting output speed based on PID control
-	pidSpeed = prop + deriv + integ;
+	//Calculate derivative term using current and previous error
+	float deriv = err - pErr;
+
+	//Calculate integral term as accumulation of error
+	integ += err;
+
+	//Calculate total PID control component
+	int pidCtrl = (Kp * err) + (Ki * integ) + (Kd * deriv);
+
+	//Calculate new speed using PID control term
+	int pidSpeed = speedPtr -> target - pidCtrl;
+
 	//Validate target speed is within range of fan
 	pidSpeed = SpeedValidate(pidSpeed);
 
-	return pidSpeed;
+	//Set pid speed
+	speedPtr -> pid = pidSpeed;
+
+	//Assign previous error values
+	pErr = err;
 }
 
+/*
 //Define function that returns speed value based on: temperature sensor
 int Temperature()
 {

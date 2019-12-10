@@ -5,6 +5,7 @@
 typedef struct Mode_t{
 	int mode;
 	int changed;
+	char description[20];
 }Mode;
 
 typedef struct Speed_t{

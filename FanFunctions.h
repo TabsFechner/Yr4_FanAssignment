@@ -19,31 +19,12 @@ void SetTarget(Speed *);
 //Declare function that takes in the desired speed and returns a speed value capped between zero and max fan rpm.
 int SpeedValidate(int);
 
-void SetPWM(Time *, Speed *);
-
-/*
+void SetPWM(Time *, Speed *, Mode *);
 
 //Declare function that returns speed value based on: user input, target speed, and measured current fan speed
-int PID(int targetSpeed, int measuredSpeed)
-{
-	static int diff, prop, deriv, integ;
+void PID(Speed *);
 
-	//Set coefficients
-	prop = 0.5;
-	deriv = 4;
-	integ = 2;
-
-	//Calculate difference in target speed and measured speed
-	diff = targetSpeed - measuredSpeed;
-
-	//Calculate resulting output speed based on PID control
-	pidSpeed = prop + deriv + integ;
-	//Validate target speed is within range of fan
-	pidSpeed = SpeedValidate(pidSpeed);
-
-	return pidSpeed;
-}
-
+/*
 //Declare function that returns speed value based on: temperature sensor
 int Temperature()
 {
