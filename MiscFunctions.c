@@ -8,7 +8,6 @@ extern volatile int * Switches;
 extern volatile int * Counter;
 extern volatile int * Keys;
 
-//TODO Update Get time comments
 //Function takes two input timestamps and returns calculated time value in desired output units
 //Units: 1 = min, 0 = s, -3 = ms, -6 = us
 void GetTime(Time * timerPtr, int units)

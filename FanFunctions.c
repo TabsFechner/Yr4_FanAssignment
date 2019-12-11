@@ -138,7 +138,7 @@ void SpeedMeasure(Time * tTachoPtr, Speed * speedPtr)
 		{
 			speedPtr -> measured = 0;
 
-			pRpm = 0;
+			//pRpm = 0;
 		}
 		else
 		{
@@ -151,7 +151,7 @@ void SpeedMeasure(Time * tTachoPtr, Speed * speedPtr)
 
 			//Calculate and validate exponential moving average of measured fan speed using previous rpm
 			speedPtr -> measured = SpeedValidate(0.5 * cRpm + (1-0.5) * pRpm);
-
+			//speedPtr -> measured = 60000/ tRev;
 			//Assign previous rpm value
 			pRpm = cRpm;
 		}
@@ -258,9 +258,9 @@ void PID(Speed * speedPtr)
 	static float integ = 0;
 
 	//Set control coefficients
-	float Kp = 5;
-	float Kd = 50;
-	float Ki = 0.05;
+	float Kp = 0.585; //0.5
+	float Kd = 0.45; //0.35
+	float Ki = 0.00005;
 
 	//Calculate difference in target speed and measured speed
 	int err = speedPtr -> target - speedPtr -> measured;
@@ -275,10 +275,10 @@ void PID(Speed * speedPtr)
 	int pidCtrl = (Kp * err) + (Ki * integ) + (Kd * deriv);
 
 	//Calculate new speed using PID control term
-	int pidSpeed = speedPtr -> target - pidCtrl;
+	int pidSpeed = speedPtr -> target + pidCtrl;
 
 	//Validate target speed is within range of fan
-	pidSpeed = SpeedValidate(pidSpeed);
+	pidCtrl = SpeedValidate(pidSpeed);
 
 	//Set pid speed
 	speedPtr -> pid = pidSpeed;
@@ -286,37 +286,3 @@ void PID(Speed * speedPtr)
 	//Assign previous error values
 	pErr = err;
 }
-
-/*
-//Define function that returns speed value based on: temperature sensor
-int Temperature()
-{
-	//Shift and mask input from GPIO to get to reading from thermistor board
-	int thermistor = *GPIOB >> 1 & 0X1;
-
-	if(thermistor > maxUncooled)
-	{
-		if (thermistor > maxSafe)
-		{
-			printf("Do something here that protects against the thermistor board overheating.");
-		}
-		else
-		{
-			//Set speed based on temperature response profile
-			tempSpeed = (3 * thermistor) - 200;
-			//Validate target speed is within range of fan
-			tempSpeed = SpeedValidate(tempSpeed);
-		}
-	}
-	else
-	{
-		tempSpeed = 0;
-	}
-
-	return tempSpeed;
-}
-*/
-
-
-
-

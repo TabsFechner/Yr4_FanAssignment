@@ -6,16 +6,10 @@
  *
  */
 
-//TODO PID control
-//TODO Use third mode to allow for setting to open loop control also
 //TODO Insert some error catches
-//TODO Improve speed measured stability when writing to HEX and system cycle period increases
-//TODO (Temp)
-//TODO Readme
-//Use of structs and pointers to structs
-//Emphasis on minimal appearance of main function while loop
-//Custom types: can have multiple counters - no need for delay, only to set counters in specified struct
-//TODO Check commenting
+//TODO Rewrite Update display function
+//TODO Update comments for GetTime function
+//TODO Write nice descriptions of each function
 
 //---------------------------------------------------------- Setup --------------------------------------------------------//
 
@@ -143,33 +137,3 @@ int main(int argc, char** argv)
 
     return 0;
 }
-
-/*
-//Function returns speed value based on: temperature sensor
-int Temperature()
-{
-	//Shift and mask input from GPIO to get to reading from thermistor board
-	int thermistor = *GPIOB >> 1 & 0X1;
-
-	if(thermistor > maxUncooled)
-	{
-		if (thermistor > maxSafe)
-		{
-			printf("Do something here that protects against the thermistor board overheating.");
-		}
-		else
-		{
-			//Set speed based on temperature response profile
-			tempSpeed = (3 * thermistor) - 200;
-			//Validate target speed is within range of fan
-			tempSpeed = SpeedValidate(tempSpeed);
-		}
-	}
-	else
-	{
-		tempSpeed = 0;
-	}
-
-	return tempSpeed;
-}
-*/
