@@ -32,9 +32,6 @@ void UpdateDisplay(Time *  tDisplayPtr, Speed * speedPtr, Mode * modePtr)
 	//Calculate time between to display timer readings
 	GetTime(tDisplayPtr, 0);
 
-	//Check for recent mode changed
-	CheckMode(modePtr);
-
 	//Check for two conditions that initiate scrolling text
 	//Condition 1: Mode has been changed by user
 	if (modePtr -> changed)
@@ -80,13 +77,21 @@ void UpdateDisplay(Time *  tDisplayPtr, Speed * speedPtr, Mode * modePtr)
 		//Check for current character index being greater than length of info string
 		if (iDisp > strlen(infoStr))
 		{
-			ClearDisplay();
+			if (modePtr -> isOn)
+			{
+				ClearDisplay();
 
-			//Set scrolling to false
-			scrl = 0;
+				//Set scrolling to false
+				scrl = 0;
 
-			//Restart timer
-			tDisplayPtr -> t1 = * Counter;
+				//Restart timer
+				tDisplayPtr -> t1 = * Counter;
+			}
+			else
+			{
+				//Set current character index to zero
+				iDisp = 0;
+			}
 		}
 		else
 		{
@@ -101,29 +106,22 @@ void UpdateDisplay(Time *  tDisplayPtr, Speed * speedPtr, Mode * modePtr)
 			case 0:
 				d1 = CharEncoder('O');
 				d2 = CharEncoder('L');
-				//returnValue = returnValue & ~(0xFF << (currentDigit * 8));
-
-				//Decode 2-digit str for HexB
-				displayValue = speedPtr -> measured;
 				break;
 
 			case 1:
 				d1 = CharEncoder('C');
 				d2 = CharEncoder('L');
-				//Decode 2-digit str for HexB
-				displayValue = speedPtr -> measured;
 				break;
 
 			case 2:
 				//Implement temp
 				break;
-
-			case 3:
-				//Implement temp
-				break;
 		}
 
 		*Hexb = d2 | (d1 << 8);
+
+		displayValue = speedPtr -> measured;
+
 		*Hexa = MultiDigitEncoder(displayValue);
 	}
 }
@@ -336,6 +334,10 @@ void GetInfoString(char * infoStrPtr, Mode * modePtr, Speed * speedPtr)
 	//Store concatenated string in array depending on current mode
 	switch (modePtr -> mode)
 	{
+		case 9:
+			strcpy(infoStrPtr, modePtr -> description);
+			break;
+
 		case 0:
 			sprintf(array, "%d      ", speedPtr -> target);
 			strcpy(infoStrPtr, modePtr -> description);
@@ -398,7 +400,7 @@ void ScrollRun(Time * tDisplayPtr, int * iDispPtr, volatile int * Counter, char 
 {
 	static int seg;
 
-	if (tDisplayPtr -> time > 0.1)
+	if (tDisplayPtr -> time > 0.2)
 	{
 		//Encode current character to 7 segment signal
 		seg = CharEncoder(*(infoStrPtr+(* iDispPtr)));
@@ -408,8 +410,6 @@ void ScrollRun(Time * tDisplayPtr, int * iDispPtr, volatile int * Counter, char 
 
 		//Increment info string character index
 		(* iDispPtr)++;
-
-		printf("%d\n", *iDispPtr);
 
 		//Restart timer
 		tDisplayPtr -> t1 = * Counter;

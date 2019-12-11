@@ -2,9 +2,10 @@
 #include "CustomTypes.h"
 
 #include <string.h>
-
+#include <stdio.h>
 
 extern volatile int * Switches;
+extern volatile int * Counter;
 extern volatile int * Keys;
 
 //Function takes two input timestamps and returns calculated time value in desired output units
@@ -22,8 +23,10 @@ void GetTime(Time * timerPtr, int units)
 	if (timerPtr -> t1 > timerPtr -> t2)
 	{
 		countsA = counterLim - timerPtr -> t1;
+
 		//Assume time greater than counter limit will not be measured
 		countsB = counterLim + timerPtr -> t2;
+
 		noCounts = countsA + countsB;
 	}
 	else
@@ -50,82 +53,103 @@ void GetTime(Time * timerPtr, int units)
 }
 
 //Function inverts value of isOn if Key_0 has just been pressed.
-int CheckOn()
+void CheckOn(Mode * modePtr)
 {
-	static int prev, isOn;
+	static int prev;
 
 	//Mask input from keys input to select only Key_0
-	 int key_0 = *Keys & 0x1;
+	int key_0 = ~*Keys & 0x1;
 
-	//Check if value of Key_0 has recently switched to 1
+	//Check if Key_0 has recently been pressed
 	if (key_0 == 1 && key_0 != prev)
 	{
-		//Invert global variable isOn
-		isOn = ~isOn;
+		//Invert system ON status
+		modePtr -> isOn = ~(modePtr -> isOn) & 0x1;
 	}
 
 	//Store current value of key_0 in prev
 	prev = key_0;
-	return isOn;
 }
 
-//Function sets mode value based on input value from switch 1.
-//Mode 0: PID Control
-//Mode 1: Temperature Control
-void CheckMode(Mode * modePtr)
+//Function sets mode value based on input value from switch 0 and switch 1
+void CheckMode(Mode * modePtr, Time * tDisplayPtr)
 {
-	static int pSum, ppSum;
+	static int pSum = 100;
+	static int pOn = 1;
 
-	//Mask input from switches input to select only switch 0 and 1 and sum
-	int sum =  *Switches & 0x3;
-
-	//Check if mode has just changed
-	if (sum == pSum && pSum != ppSum)
+	//Check if system is on
+	if (modePtr -> isOn)
 	{
-		modePtr -> changed = 1;
+		//Mask input from switches input to select only switch 0 and 1 and sum
+		int sum =  *Switches & 0x3;
 
+		//Check if mode or ON status has just changed
+		if (sum != pSum || pOn != modePtr -> isOn)
+		{
+			modePtr -> changed = 1;
+
+			//Restart user input timer
+			tDisplayPtr -> t1 = * Counter;
+		}
+		else
+		{
+			modePtr -> changed = 0;
+		}
+
+		//Change mode and set mode description based on switch positions
 		switch(sum)
 		{
-			//PID mode
+			//Open loop control mode
 			case 0:
 				modePtr -> mode = 0;
-				strcpy(modePtr -> description, "MODE OL SPEED ");
+				strcpy(modePtr -> description, "MODE OL TARGET ");
 				break;
 
-			//TEMP mode
+			//Closed loop PID control mode
 			case 1:
 				modePtr -> mode = 1;
-				strcpy(modePtr -> description, "MODE CL SPEED ");
-				//modePtr -> description = "MODE CL SPEED ";
+				strcpy(modePtr -> description, "MODE CL TARGET ");
 				break;
 
-			//implement another mode
+			//Temperature mode
 			case 2:
 				modePtr -> mode = 2;
-				strcpy(modePtr -> description, "MODE TEMP SPEED ");
-				//modePtr -> description = "MODE TEMP SPEED ";
+				strcpy(modePtr -> description, "MODE TEMP TARGET ");
 				break;
 
-			//implement another mode
+			//Temperature mode
 			case 3:
 				modePtr -> mode = 2;
-				strcpy(modePtr -> description, "MODE TEMP SPEED ");
-				//modePtr -> description = "MODE TEMP SPEED ";
+				strcpy(modePtr -> description, "MODE TEMP TARGET ");
 				break;
 
 			default:
 				modePtr -> mode = 0;
-				strcpy(modePtr -> description, "MODE OL SPEED ");
-				//modePtr -> description = "MODE OL SPEED ";
+				strcpy(modePtr -> description, "MODE OL TARGET ");
 				break;
 		}
+
+		//Store previous values
+		pSum = sum;
 	}
 	else
 	{
-		modePtr -> changed = 0;
+		//Check is ON status has just changed
+		if (pOn == 1)
+		{
+			modePtr -> changed = 1;
+		}
+		else if (pOn == modePtr -> isOn)
+		{
+			modePtr -> changed = 0;
+		}
+
+		//Set mode to -1 if system is off
+		modePtr -> mode = 9;
+
+		//Define info string to be displayed when system is off
+		strcpy(modePtr -> description, "FAN OFF      ");
 	}
 
-	//Store previous values
-	ppSum = pSum;
-	pSum = sum;
+	pOn = modePtr -> isOn;
 }

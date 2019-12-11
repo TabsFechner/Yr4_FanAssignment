@@ -6,16 +6,10 @@
  *
  */
 
-//TODO PID control
-//TODO Use third mode to allow for setting to open loop control also
 //TODO Insert some error catches
-//TODO Improve speed measured stability when writing to HEX and system cycle period increases
-//TODO (Temp)
-//TODO Readme
-//Use of structs and pointers to structs
-//Emphasis on minimal appearance of main function while loop
-//Custom types: can have multiple counters - no need for delay, only to set counters in specified struct
-//TODO Check commenting
+//TODO Rewrite Update display function
+//TODO Update comments for GetTime function
+//TODO Write nice descriptions of each function
 
 //---------------------------------------------------------- Setup --------------------------------------------------------//
 
@@ -44,7 +38,7 @@ volatile int * Keys = (volatile int *)(ALT_LWFPGA_KEY_BASE);
 volatile int * Counter = (volatile int *)(ALT_LWFPGA_COUNTER_BASE);
 volatile int * Hexa = (volatile int *)(ALT_LWFPGA_HEXA_BASE);
 volatile int * Hexb = (volatile int *)(ALT_LWFPGA_HEXB_BASE);
-volatile int * GPIOA = (volatile int *)(ALT_LWFPGA_GPIO_1A_BASE);
+volatile int * GPIOA = (volatile int *)(ALT_LWFPGA_GPIO_0A_BASE);
 
 //----------------------------------------------------- Main Function -----------------------------------------------------//
 
@@ -52,7 +46,6 @@ int main(int argc, char** argv)
 {
 	//Initialise FPGA configuration
 	EE30186_Start();
-	static int isOn = 0;
 
 	//------------------------------- Initialise timers ---------------------------------
 
@@ -69,17 +62,18 @@ int main(int argc, char** argv)
 	static Time tTacho;
 	tTacho.t1 = * Counter;
 
-
 	//------------------------- Initialise other custom structs -------------------------
 
 	//Define struct of custom type speed to store fan speed data and
 	//initialise fan speed target as zero
-	Speed speed;
+	static Speed speed;
 	speed.target = 0;
+	speed.measured = 0;
 
 	//Define stuct of custom type Mode to store current mode and mode change flag
-	Mode mode;
-	mode.mode = 0;
+	static Mode mode;
+	mode.isOn = 0;
+	mode.changed = 1;
 
 	//Initialise data direction register for GPIOA and set pin 3 of GPIO
 	//to be output
@@ -91,10 +85,13 @@ int main(int argc, char** argv)
 	while (1)
 	{
 		//Check on-off
-		if (isOn)
+		if (mode.isOn)
 		{
+			//Check for current mode
+			CheckMode(&mode, &tDisplay);
+
 			//Read user input as demand for change in speed
-			RotaryEncoder(&speed);
+			RotaryEncoder(&speed, &tDisplay);
 
 			//Set target speed
 			SetTarget(&speed);
@@ -118,13 +115,20 @@ int main(int argc, char** argv)
 			//Check current display status and update display accordingly
 			UpdateDisplay(&tDisplay, &speed, &mode);
 
-			isOn = CheckOn();
+			CheckOn(&mode);
 		}
 		else
 		{
+			//Check for current mode
+			CheckMode(&mode, &tDisplay);
+
 			//Set GPIO register to all zeros
 			*GPIOA = 0x0;
-			isOn = CheckOn();
+
+			//Check current display status and update display accordingly
+			UpdateDisplay(&tDisplay, &speed, &mode);
+
+			CheckOn(&mode);
 		}
 	}
 
@@ -133,33 +137,3 @@ int main(int argc, char** argv)
 
     return 0;
 }
-
-/*
-//Function returns speed value based on: temperature sensor
-int Temperature()
-{
-	//Shift and mask input from GPIO to get to reading from thermistor board
-	int thermistor = *GPIOB >> 1 & 0X1;
-
-	if(thermistor > maxUncooled)
-	{
-		if (thermistor > maxSafe)
-		{
-			printf("Do something here that protects against the thermistor board overheating.");
-		}
-		else
-		{
-			//Set speed based on temperature response profile
-			tempSpeed = (3 * thermistor) - 200;
-			//Validate target speed is within range of fan
-			tempSpeed = SpeedValidate(tempSpeed);
-		}
-	}
-	else
-	{
-		tempSpeed = 0;
-	}
-
-	return tempSpeed;
-}
-*/
