@@ -22,14 +22,10 @@ int maxRpm = 2500;
 //TODO improve reliability under fast turning. Probably to do with sampling rate, not sequence of encoder bits.
 //Define function that takes void input and returns user input, change in speed
 //demand, based on current and previous encoder readings
-void RotaryEncoder(Speed * speedPtr)
+void RotaryEncoder(Speed * speedPtr, Time * tDisplayPtr)
 {
 	static int increment = 5;
 	static int prevSum;
-
-	//Declare and initialise variable n used to ensure only one demand signal is sent per click of encoder.
-	//Otherwise two changes detected per click due to complete 2-bit Grey code sequence per click
-	//static int n = 0;
 
 	//Reset current demand to zero at start of each cycle
 	speedPtr -> demand = 0;
@@ -40,14 +36,18 @@ void RotaryEncoder(Speed * speedPtr)
 	//Compare sum of bits to previous sum to derive direction of rotation.
 	switch (sum)
 	{
+		//If acceptable rotary encoder input is receieved, set the demand and reset the
+		//user input timer
 		case(0):
 			if (prevSum == 2)
 			{
 				speedPtr -> demand = -increment;
+				tDisplayPtr -> t1 = * Counter;
 			}
 			else if (prevSum == 1)
 			{
 				speedPtr -> demand = increment;
+				tDisplayPtr -> t1 = * Counter;
 			}
 			break;
 
@@ -55,10 +55,12 @@ void RotaryEncoder(Speed * speedPtr)
 			if (prevSum == 0)
 			{
 				speedPtr -> demand = -increment;
+				tDisplayPtr -> t1 = * Counter;
 			}
 			else if (prevSum == 3)
 			{
 				speedPtr -> demand = increment;
+				tDisplayPtr -> t1 = * Counter;
 			}
 			break;
 
@@ -66,10 +68,12 @@ void RotaryEncoder(Speed * speedPtr)
 			if (prevSum == 3)
 			{
 				speedPtr -> demand = -increment;
+				tDisplayPtr -> t1 = * Counter;
 			}
 			else if (prevSum == 0)
 			{
 				speedPtr -> demand = increment;
+				tDisplayPtr -> t1 = * Counter;
 			}
 			break;
 
@@ -77,10 +81,12 @@ void RotaryEncoder(Speed * speedPtr)
 			if (prevSum == 1)
 			{
 				speedPtr -> demand = -increment;
+				tDisplayPtr -> t1 = * Counter;
 			}
 			else if (prevSum == 2)
 			{
 				speedPtr -> demand = increment;
+				tDisplayPtr -> t1 = * Counter;
 			}
 			break;
 
@@ -100,11 +106,11 @@ void SpeedMeasure(Time * tTachoPtr, Speed * speedPtr)
 	int tLimit = 500;
 
 	//Declare and initialise number of rising edges detected in fan tachometer signal
-	static int edgeCount;
+	static int edgeCount = 0;
 
-	//Declare two variables to store previous tachometer readings in. Static will ensure these are not
-	//cleared between loops
-	static int pTach;
+	//Declare the variable to store previous tachometer readings in and previous calculated
+	//speed, used in moving average calculation to smooth measured speed reading.
+	static int pTach, pRpm;
 
 	//Shift and mask input from GPIO to get to tachometer input
 	int tacho = *GPIOA >> 1 & 0x1;
@@ -127,18 +133,27 @@ void SpeedMeasure(Time * tTachoPtr, Speed * speedPtr)
 
 	if (tTachoPtr -> time > tLimit)
 	{
-		//Check if fan stationary
+		//Check if fan is stationary
 		if (edgeCount == 0)
 		{
 			speedPtr -> measured = 0;
+
+			pRpm = 0;
 		}
-		else //If not, calculate speed
+		else
 		{
-			//Calculate time for one fan revolution
+			//Calculate time for one fan revolution. NOTE: one tachometer cycle equates
+			//to half a fan revolution.
 			float tRev = (2 * tLimit) / (float)edgeCount;
 
-			//Calculate RPM
-			speedPtr -> measured = 60000/ tRev;
+			//Calculate current rpm
+			int cRpm = 60000/ tRev;
+
+			//Calculate and validate exponential moving average of measured fan speed using previous rpm
+			speedPtr -> measured = SpeedValidate(0.5 * cRpm + (1-0.5) * pRpm);
+
+			//Assign previous rpm value
+			pRpm = cRpm;
 		}
 
 		edgeCount = 0;
@@ -148,21 +163,20 @@ void SpeedMeasure(Time * tTachoPtr, Speed * speedPtr)
 	}
 }
 
-//Define function that returns user input, target fan speed, based  on input of previous demand speed and change in speed demanded as a percentage of max RPM.
+//Define function that returns user input, target fan speed, based  on input of previous
+//demand speed and change in speed demanded as a percentage of max RPM.
 void SetTarget(Speed * speedPtr)
 {
 	static int prev;
 
-	//Calculate new target speed
-	speedPtr -> target = prev + (speedPtr -> demand * maxRpm)/100;
-
-	//Validate target speed is within range of fan
-	speedPtr -> target = SpeedValidate(speedPtr -> target);
+	//Calculate and validate new target speed
+	speedPtr -> target = SpeedValidate(prev + (speedPtr -> demand * maxRpm)/100);
 
 	prev = speedPtr -> target;
 }
 
-//Define function that takes in the desired speed and returns a speed value capped between zero and max fan rpm.
+//Define function that takes in the desired speed and returns a speed value capped between
+//zero and max fan rpm.
 int SpeedValidate(int spd)
 {
 	//Validate target range
@@ -170,9 +184,9 @@ int SpeedValidate(int spd)
 	{
 		spd = maxRpm;
 	}
-	else if (spd < maxRpm * 0.15)
+	else if (spd < maxRpm * 0.1)
 	{
-		spd = maxRpm * 0.15;
+		spd = maxRpm * 0.1;
 	}
 
 	return spd;
@@ -186,16 +200,28 @@ void SetPWM(Time * tPWMPtr, Speed * speedPtr, Mode * modePtr)
 	//Declare duty-cycle variable
 	float D;
 
-	//Check for current mode set: 0 = PID control; 1 = Temp control
-	if (modePtr -> mode)
+	//Set duty cycle according to current mode
+	switch (modePtr -> mode)
 	{
-		//Implement temp control mode
-		D = 0;
-	}
-	else
-	{
-		//Calculate duty cycle
-		D = (float)speedPtr -> pid / maxRpm;
+		case 0:
+			//Control fan output according to user input target speed (open-loop control)
+			D = (float)speedPtr -> target / maxRpm;
+			break;
+
+		case 1:
+			//Control fan output according to pid control
+			D = (float)speedPtr -> pid / maxRpm;
+			break;
+
+		case 2:
+			//Implement temp control mode
+			D = 0;
+			break;
+
+		default:
+			//Default to open-loop control
+			D = (float)speedPtr -> target / maxRpm;
+			break;
 	}
 
 	//Set second timer reading
@@ -223,7 +249,8 @@ void SetPWM(Time * tPWMPtr, Speed * speedPtr, Mode * modePtr)
 	}
 }
 
-//Define function that returns speed value based on: user input, target speed, and measured current fan speed
+//Define function that returns speed value based on: user input, target speed, and
+//measured current fan speed
 void PID(Speed * speedPtr)
 {
 	//Declare variable to store previous error calculated
@@ -231,9 +258,9 @@ void PID(Speed * speedPtr)
 	static float integ = 0;
 
 	//Set control coefficients
-	float Kp = 0.5;
-	float Kd = 4;
-	float Ki = 2;
+	float Kp = 5;
+	float Kd = 50;
+	float Ki = 0.05;
 
 	//Calculate difference in target speed and measured speed
 	int err = speedPtr -> target - speedPtr -> measured;

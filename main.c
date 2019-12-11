@@ -44,7 +44,7 @@ volatile int * Keys = (volatile int *)(ALT_LWFPGA_KEY_BASE);
 volatile int * Counter = (volatile int *)(ALT_LWFPGA_COUNTER_BASE);
 volatile int * Hexa = (volatile int *)(ALT_LWFPGA_HEXA_BASE);
 volatile int * Hexb = (volatile int *)(ALT_LWFPGA_HEXB_BASE);
-volatile int * GPIOA = (volatile int *)(ALT_LWFPGA_GPIO_1A_BASE);
+volatile int * GPIOA = (volatile int *)(ALT_LWFPGA_GPIO_0A_BASE);
 
 //----------------------------------------------------- Main Function -----------------------------------------------------//
 
@@ -52,7 +52,6 @@ int main(int argc, char** argv)
 {
 	//Initialise FPGA configuration
 	EE30186_Start();
-	static int isOn = 0;
 
 	//------------------------------- Initialise timers ---------------------------------
 
@@ -69,17 +68,18 @@ int main(int argc, char** argv)
 	static Time tTacho;
 	tTacho.t1 = * Counter;
 
-
 	//------------------------- Initialise other custom structs -------------------------
 
 	//Define struct of custom type speed to store fan speed data and
 	//initialise fan speed target as zero
 	Speed speed;
 	speed.target = 0;
+	speed.measured = 0;
 
 	//Define stuct of custom type Mode to store current mode and mode change flag
 	Mode mode;
-	mode.mode = 0;
+	mode.isOn = 0;
+	mode.changed = 1;
 
 	//Initialise data direction register for GPIOA and set pin 3 of GPIO
 	//to be output
@@ -91,10 +91,10 @@ int main(int argc, char** argv)
 	while (1)
 	{
 		//Check on-off
-		if (isOn)
+		if (mode.isOn)
 		{
 			//Read user input as demand for change in speed
-			RotaryEncoder(&speed);
+			RotaryEncoder(&speed, &tDisplay);
 
 			//Set target speed
 			SetTarget(&speed);
@@ -118,13 +118,17 @@ int main(int argc, char** argv)
 			//Check current display status and update display accordingly
 			UpdateDisplay(&tDisplay, &speed, &mode);
 
-			isOn = CheckOn();
+			CheckOn(&mode);
 		}
 		else
 		{
 			//Set GPIO register to all zeros
 			*GPIOA = 0x0;
-			isOn = CheckOn();
+
+			//Check current display status and update display accordingly
+			UpdateDisplay(&tDisplay, &speed, &mode);
+
+			CheckOn(&mode);
 		}
 	}
 

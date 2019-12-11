@@ -3,6 +3,7 @@
 #define CUSTOMTYPES_H
 
 typedef struct Mode_t{
+	int isOn;
 	int mode;
 	int changed;
 	char description[20];
