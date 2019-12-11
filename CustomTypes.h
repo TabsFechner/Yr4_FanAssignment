@@ -23,4 +23,12 @@ typedef struct Time_t{
 	float time;
 }Time;
 
+typedef struct Display_t{
+	int iDisp;
+	int scrl;
+	int scrlMode;
+	int nTime;
+	char infoStr[100];
+}Display;
+
 #endif

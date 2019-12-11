@@ -19,7 +19,6 @@ int maxRpm = 2500;
 
 //----------------------------------------------------- Fan Functions -----------------------------------------------------//
 
-//TODO improve reliability under fast turning. Probably to do with sampling rate, not sequence of encoder bits.
 //Define function that takes void input and returns user input, change in speed
 //demand, based on current and previous encoder readings
 void RotaryEncoder(Speed * speedPtr, Time * tDisplayPtr)
