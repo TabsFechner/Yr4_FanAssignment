@@ -184,9 +184,9 @@ int SpeedValidate(int spd)
 	{
 		spd = maxRpm;
 	}
-	else if (spd < maxRpm * 0.1)
+	else if (spd < 0)
 	{
-		spd = maxRpm * 0.1;
+		spd = 0;
 	}
 
 	return spd;
@@ -195,10 +195,10 @@ int SpeedValidate(int spd)
 void SetPWM(Time * tPWMPtr, Speed * speedPtr, Mode * modePtr)
 {
 	//Define signal period as 50ms
-	int T = 50;
+	static int T = 50;
 
 	//Declare duty-cycle variable
-	float D;
+	static float D;
 
 	//Set duty cycle according to current mode
 	switch (modePtr -> mode)

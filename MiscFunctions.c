@@ -66,14 +66,6 @@ void CheckOn(Mode * modePtr)
 	{
 		//Invert system ON status
 		modePtr -> isOn = ~(modePtr -> isOn) & 0x1;
-
-		//Indicate mode has recently changed
-		modePtr -> changed = 1;
-	}
-	else
-	{
-		//Indicate mode has not recently changed
-		modePtr -> changed = 0;
 	}
 
 	//Store current value of key_0 in prev
@@ -84,6 +76,7 @@ void CheckOn(Mode * modePtr)
 void CheckMode(Mode * modePtr, Time * tDisplayPtr)
 {
 	static int pSum = 100;
+	static int pOn = 1;
 
 	//Check if system is on
 	if (modePtr -> isOn)
@@ -91,8 +84,18 @@ void CheckMode(Mode * modePtr, Time * tDisplayPtr)
 		//Mask input from switches input to select only switch 0 and 1 and sum
 		int sum =  *Switches & 0x3;
 
-		//Restart user input timer
-		tDisplayPtr -> t1 = * Counter;
+		//Check if mode or ON status has just changed
+		if (sum != pSum || pOn != modePtr -> isOn)
+		{
+			modePtr -> changed = 1;
+
+			//Restart user input timer
+			tDisplayPtr -> t1 = * Counter;
+		}
+		else
+		{
+			modePtr -> changed = 0;
+		}
 
 		//Change mode and set mode description based on switch positions
 		switch(sum)
@@ -127,25 +130,27 @@ void CheckMode(Mode * modePtr, Time * tDisplayPtr)
 				break;
 		}
 
-		//Check if mode has just changed
-		if (sum != pSum)
-		{
-			modePtr -> changed = 1;
-		}
-		else
-		{
-			modePtr -> changed = 0;
-		}
-
 		//Store previous values
 		pSum = sum;
 	}
 	else
 	{
+		//Check is ON status has just changed
+		if (pOn == 1)
+		{
+			modePtr -> changed = 1;
+		}
+		else if (pOn == modePtr -> isOn)
+		{
+			modePtr -> changed = 0;
+		}
+
 		//Set mode to -1 if system is off
-		modePtr -> mode = -1;
+		modePtr -> mode = 9;
 
 		//Define info string to be displayed when system is off
 		strcpy(modePtr -> description, "FAN OFF      ");
 	}
+
+	pOn = modePtr -> isOn;
 }

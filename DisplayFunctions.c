@@ -32,9 +32,6 @@ void UpdateDisplay(Time *  tDisplayPtr, Speed * speedPtr, Mode * modePtr)
 	//Calculate time between to display timer readings
 	GetTime(tDisplayPtr, 0);
 
-	//Check for recent mode changed
-	CheckMode(modePtr, tDisplayPtr);
-
 	//Check for two conditions that initiate scrolling text
 	//Condition 1: Mode has been changed by user
 	if (modePtr -> changed)
@@ -337,7 +334,7 @@ void GetInfoString(char * infoStrPtr, Mode * modePtr, Speed * speedPtr)
 	//Store concatenated string in array depending on current mode
 	switch (modePtr -> mode)
 	{
-		case -1:
+		case 9:
 			strcpy(infoStrPtr, modePtr -> description);
 			break;
 
@@ -403,7 +400,7 @@ void ScrollRun(Time * tDisplayPtr, int * iDispPtr, volatile int * Counter, char 
 {
 	static int seg;
 
-	if (tDisplayPtr -> time > 0.3)
+	if (tDisplayPtr -> time > 0.2)
 	{
 		//Encode current character to 7 segment signal
 		seg = CharEncoder(*(infoStrPtr+(* iDispPtr)));

@@ -72,12 +72,12 @@ int main(int argc, char** argv)
 
 	//Define struct of custom type speed to store fan speed data and
 	//initialise fan speed target as zero
-	Speed speed;
+	static Speed speed;
 	speed.target = 0;
 	speed.measured = 0;
 
 	//Define stuct of custom type Mode to store current mode and mode change flag
-	Mode mode;
+	static Mode mode;
 	mode.isOn = 0;
 	mode.changed = 1;
 
@@ -93,6 +93,9 @@ int main(int argc, char** argv)
 		//Check on-off
 		if (mode.isOn)
 		{
+			//Check for current mode
+			CheckMode(&mode, &tDisplay);
+
 			//Read user input as demand for change in speed
 			RotaryEncoder(&speed, &tDisplay);
 
@@ -122,6 +125,9 @@ int main(int argc, char** argv)
 		}
 		else
 		{
+			//Check for current mode
+			CheckMode(&mode, &tDisplay);
+
 			//Set GPIO register to all zeros
 			*GPIOA = 0x0;
 
