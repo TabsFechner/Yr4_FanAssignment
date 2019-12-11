@@ -17,7 +17,13 @@ extern volatile int * Hexb;
 
 //----------------------------------------------------- Display Functions -----------------------------------------------------//
 
-//Define function that updates diplay based on current status of display and recent system changes
+/*
+  Function prepares and calls the two major functions used to update the HEX display. 
+  Input: Pointer to display timer struct of custom type Time
+  Input: Pointer to speed struct of custom type Speed
+  Input: Pointer to mode struct of custom type Mode
+  Output: void 
+*/
 void DisplayManage(Time *  tDisplayPtr, Speed * speedPtr, Mode * modePtr)
 {
 	static Display display = { .nTime = 0, .scrl = 0, .iDisp = 0 };
@@ -33,6 +39,16 @@ void DisplayManage(Time *  tDisplayPtr, Speed * speedPtr, Mode * modePtr)
 	UpdateDisplay(&display, tDisplayPtr, modePtr, speedPtr);
 }
 
+/*
+  Function updates information to be displayed on HEX displays, either if the system mode has 
+  recently changed or if there has been no user input for over 2 minutes, by initiating the 
+  scrolling text setup.
+  Input: Pointer to display information struct of custom type Display
+  Input: Pointer to display timer struct of custom type Time
+  Input: Pointer to mode struct of custom type Mode
+  Input: Pointer to speed struct of custom type Speed
+  Output: void 
+*/
 void UpdateInfo(Display * displayPtr, Time * tDisplayPtr, Mode * modePtr, Speed * speedPtr)
 {
 	//Check for two conditions that trigger scrolling text to be updated
@@ -77,6 +93,16 @@ void UpdateInfo(Display * displayPtr, Time * tDisplayPtr, Mode * modePtr, Speed 
 	}
 }
 
+/*
+  Function updates the display once the necessary display information changes have been made. If
+  no scrolling text is to be displayed, the display output will be set to show live information 
+  about the system mode and fan speed.
+  Input: Pointer to display information struct of custom type Display
+  Input: Pointer to display timer struct of custom type Time
+  Input: Pointer to mode struct of custom type Mode
+  Input: Pointer to speed struct of custom type Speed
+  Output: void 
+*/
 void UpdateDisplay(Display * displayPtr, Time * tDisplayPtr, Mode * modePtr, Speed * speedPtr)
 {
 	int displayValue, d1, d2;
@@ -109,7 +135,6 @@ void UpdateDisplay(Display * displayPtr, Time * tDisplayPtr, Mode * modePtr, Spe
 			ScrollRun(displayPtr, tDisplayPtr, Counter);
 		}
 	}
-
 	else
 	{
 		switch(modePtr -> mode)
@@ -137,7 +162,11 @@ void UpdateDisplay(Display * displayPtr, Time * tDisplayPtr, Mode * modePtr, Spe
 	}
 }
 
-//Define function that takes multi digit value and encodes into active segments for hex display HexA
+/*
+  Function takes mult digit value and encodes into active segments for HEX display HexA.
+  Input: Integer value of multiple digit fan speed
+  Output: Binary value used to write to display output
+*/
 int MultiDigitEncoder (int value)
 {
 	//Define empty display value to return
@@ -183,7 +212,12 @@ int MultiDigitEncoder (int value)
 	return returnValue;
 }
 
-//Define function that takes char from info string and encodes into active segments for hex display
+/*
+  Function takes character from display information string and encodes into active segments
+  for HEX display.
+  Input: Character value of single letter or number
+  Output: Binary value used to write to display output
+*/
 int CharEncoder(char ch)
 {
 	int seg;
@@ -309,7 +343,7 @@ int CharEncoder(char ch)
 	return seg;
 }
 
-//Define function that simply clears the hex display
+//Define function that simply clears the entire HEX display
 void ClearDisplay()
 {
 	//Clear Hex display
@@ -319,7 +353,14 @@ void ClearDisplay()
 
 //----------------------------------------------- Display Functions: Scrolling Display --------------------------------------------------//
 
-//Define function that sets up scrolling of new string
+/*
+  Function gets display information string based on scrolling purpose.
+  Input: Pointer to display information struct of custom type Display
+  Input: Pointer to mode struct of custom type Mode
+  Input: Pointer to speed struct of custom type Speed
+  Output: void 
+*/
+//TODO: move this to be within update info Function
 void ScrollSetup(Display * displayPtr, Mode * modePtr, Speed * speedPtr)
 {
 	ClearDisplay();
@@ -336,7 +377,14 @@ void ScrollSetup(Display * displayPtr, Mode * modePtr, Speed * speedPtr)
 	}
 }
 
-//Define function that generates information string depending on current mode set.
+/*
+  Function generates information string based on current system mode description and 
+  fan speed.
+  Input: Pointer to display information struct of custom type Display
+  Input: Pointer to mode struct of custom type Mode
+  Input: Pointer to speed struct of custom type Speed
+  Output: void 
+*/
 void GetInfoString(Display * displayPtr, Mode * modePtr, Speed * speedPtr)
 {
 	//Declare array
@@ -372,7 +420,12 @@ void GetInfoString(Display * displayPtr, Mode * modePtr, Speed * speedPtr)
 	}
 }
 
-//Define function that randomly selects Romeo and Juliet extract and stores in infoStr array
+/*
+  Function randomly selects 1 of 8 Romeo and Juliet extract to be used as display 
+  information string.
+  Input: Pointer to display information struct of custom type Display
+  Output: void 
+*/
 void GetJuliet(Display * displayPtr)
 {
 	int x = rand();
@@ -406,7 +459,15 @@ void GetJuliet(Display * displayPtr)
 	}
 }
 
-//Define function that writes scrolling text to hex displays
+/*
+  Function, after a given time period, encodes current character from display information 
+  string and decodes into output for HEX display. After calling a function to scroll 
+  display output, the current character index is incremented.
+  Input: Pointer to display information struct of custom type Display
+  Input: Pointer to display timer struct of custom type Time
+  Input: Pointer to system counter, used to restart display timer
+  Output: void
+*/
 void ScrollRun(Display * displayPtr, Time * tDisplayPtr, volatile int * Counter)
 {
 	static int seg;
@@ -427,7 +488,11 @@ void ScrollRun(Display * displayPtr, Time * tDisplayPtr, volatile int * Counter)
 	}
 }
 
-//Define function that writes encoded display message to HEX displays
+/*
+  Function shifts display along and writes new character into display.
+  Input: Decoded binary value for HEX display output
+  Output: void
+*/
 void ScrollOut(int hexValue)
 {
 	//Define empty display value to return
