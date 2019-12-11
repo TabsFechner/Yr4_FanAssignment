@@ -1,6 +1,8 @@
 #include "MiscFunctions.h"
 #include "CustomTypes.h"
 
+#include <string.h>
+
 
 extern volatile int * Switches;
 extern volatile int * Keys;
@@ -72,21 +74,51 @@ int CheckOn()
 //Mode 1: Temperature Control
 void CheckMode(Mode * modePtr)
 {
-	static int prev, pPrev;
+	static int pSum, ppSum;
 
-	//Mask input from switches input to select only switch_0
-	int switch_0 = * Switches & 0x1;
+	//Mask input from switches input to select only switch 0 and 1 and sum
+	int sum =  *Switches & 0x3;
 
 	//Check if mode has just changed
-	if (switch_0 == 1 && prev == 1 && switch_0 != pPrev)
+	if (sum == pSum && pSum != ppSum)
 	{
 		modePtr -> changed = 1;
-		modePtr -> mode = 1;
-	}
-	else if (switch_0 == 0 && prev == 0 && switch_0 != pPrev)
-	{
-		modePtr -> changed = 1;
-		modePtr -> mode = 0;
+
+		switch(sum)
+		{
+			//PID mode
+			case 0:
+				modePtr -> mode = 0;
+				strcpy(modePtr -> description, "MODE OL SPEED ");
+				break;
+
+			//TEMP mode
+			case 1:
+				modePtr -> mode = 1;
+				strcpy(modePtr -> description, "MODE CL SPEED ");
+				//modePtr -> description = "MODE CL SPEED ";
+				break;
+
+			//implement another mode
+			case 2:
+				modePtr -> mode = 2;
+				strcpy(modePtr -> description, "MODE TEMP SPEED ");
+				//modePtr -> description = "MODE TEMP SPEED ";
+				break;
+
+			//implement another mode
+			case 3:
+				modePtr -> mode = 2;
+				strcpy(modePtr -> description, "MODE TEMP SPEED ");
+				//modePtr -> description = "MODE TEMP SPEED ";
+				break;
+
+			default:
+				modePtr -> mode = 0;
+				strcpy(modePtr -> description, "MODE OL SPEED ");
+				//modePtr -> description = "MODE OL SPEED ";
+				break;
+		}
 	}
 	else
 	{
@@ -94,6 +126,6 @@ void CheckMode(Mode * modePtr)
 	}
 
 	//Store previous values
-	pPrev = prev;
-	prev = switch_0;
+	ppSum = pSum;
+	pSum = sum;
 }

@@ -7,7 +7,7 @@
 //----------------------------------------------------- Display Functions -----------------------------------------------------//
 
 //Declare function that updates diplay based on current status of display and recent system changes
-void UpdateDisplay(Time *, Speed *);
+void UpdateDisplay(Time *, Speed *, Mode *);
 
 //Declare function that takes multi digit value and encodes into active segments for hex display HexA
 int MultiDigitEncoder (int);
