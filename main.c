@@ -4,10 +4,12 @@
  *       Start Date:	25.11.2019
  *  Submission Date:	12.12.2019
  *
+ *	Program used to control a single 3-pin fan, taking user input through various periphery devices
+ *  on either the FPGA or the extension board. Two modes of operation implement either open-loop or
+ *  closed-loop PID control of the fan speed. HEX displays used to display information about the fan
+ *  and system.
+ *
  */
-
-//TODO Update comments for GetTime function
-//TODO Write nice descriptions of each function
 
 //---------------------------------------------------------- Setup --------------------------------------------------------//
 

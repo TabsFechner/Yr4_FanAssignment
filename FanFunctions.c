@@ -11,7 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-//Declare necessary pointers to interface ports. Defined elsewhere.
+//Declare necessary pointers to interface ports. Defined in main.c
 extern volatile int * GPIOA;
 extern volatile int * Counter;
 
@@ -19,11 +19,13 @@ int maxRpm = 2500;
 
 //----------------------------------------------------- Fan Functions -----------------------------------------------------//
 
-/*Function reads input from the 2 pins of the rotary encoder and derives the direction of rotation
+/*
+  Function reads input from the 2 pins of the rotary encoder and derives the direction of rotation
   based on previous pin values. Standard increment of +- 5 used to change target fan speed.
   Input: Pointer to speed struct of custom type Speed
   Input: Pointer to display timer struct of custom type Time
-  Output: Void */
+  Output: Void 
+*/
 void RotaryEncoder(Speed * speedPtr, Time * tDisplayPtr)
 {
 	static int increment = 5;
@@ -101,12 +103,14 @@ void RotaryEncoder(Speed * speedPtr, Time * tDisplayPtr)
 	prevSum = sum;
 }
 
-/*Function uses signal from fan tachometer sensor to calculate the speed of rotation in
+/*
+  Function uses signal from fan tachometer sensor to calculate the speed of rotation in
   revolutions per minute. Number of rising edges counted in given time window used to 
   calculate exponential moving average of measured fan speed.
   Input: Pointer to tachometer timer struct of customer type Time
   Input: Pointer to speed struct of custom type Speed
-  Output: Void */
+  Output: Void 
+*/
 void SpeedMeasure(Time * tTachoPtr, Speed * speedPtr)
 {
 	//Define timer limit used to count number of edges and calculate fan speed
@@ -144,8 +148,9 @@ void SpeedMeasure(Time * tTachoPtr, Speed * speedPtr)
 		if (edgeCount == 0)
 		{
 			speedPtr -> measured = 0;
-
-			//pRpm = 0;
+			
+			//Assign previous rpm value
+			pRpm = 0;
 		}
 		else
 		{
@@ -158,7 +163,7 @@ void SpeedMeasure(Time * tTachoPtr, Speed * speedPtr)
 
 			//Calculate and validate exponential moving average of measured fan speed using previous rpm
 			speedPtr -> measured = SpeedValidate(0.5 * cRpm + (1-0.5) * pRpm);
-			//speedPtr -> measured = 60000/ tRev;
+			
 			//Assign previous rpm value
 			pRpm = cRpm;
 		}
@@ -169,10 +174,13 @@ void SpeedMeasure(Time * tTachoPtr, Speed * speedPtr)
 		tTachoPtr -> t1 = * Counter;
 	}
 }
-/*Function uses user input of change in speed from rotary encoder to change target fan speed.
+
+/*
+  Function uses user input of change in speed from rotary encoder to change target fan speed.
   Target speed validated to be within fan operation range.
   Input: Pointer to speed struct of custom type Speed
-  Output: Void */
+  Output: Void 
+*/
 void SetTarget(Speed * speedPtr)
 {
 	static int prev;
@@ -183,10 +191,12 @@ void SetTarget(Speed * speedPtr)
 	prev = speedPtr -> target;
 }
 
-/*Function takes in arbitrary integer value as speed and limits to within minimum and maximum 
+/*
+  Function takes in arbitrary integer value as speed and limits to within minimum and maximum 
   fan speed range of operation.
   Input: Integer value for speed
-  Output: Integer value for limited speed */
+  Output: Integer value for limited speed 
+*/
 int SpeedValidate(int spd)
 {
 	//Validate target range
@@ -202,13 +212,15 @@ int SpeedValidate(int spd)
 	return spd;
 }
 
-/*Function calculates duty cycle based on target speed and writes output to fan for given time period
+/*
+  Function calculates duty cycle based on target speed and writes output to fan for given time period
   to generate a pulse-width-modulated square wave that controls the power supplied to the fan and thus
   the fan output speed.
   Input: Pointer to PWM timer struct of customer type Time
   Input: Pointer to speed struct of custom type Speed
   Input: Pointer to mode struct of custom type Mode
-  Output: Void */
+  Output: Void 
+*/
 void SetPWM(Time * tPWMPtr, Speed * speedPtr, Mode * modePtr)
 {
 	//Define signal period as 50ms
@@ -247,7 +259,7 @@ void SetPWM(Time * tPWMPtr, Speed * speedPtr, Mode * modePtr)
 	//Time returned in milliseconds
 	GetTime(tPWMPtr, -3);
 
-	//Set fan to ON if current time is less than time on period, where time on period
+	//Set fan to ON if current time is less than time_on period, where time_on period
 	//is duty cycle times signal time period
 	if (tPWMPtr -> time <= D * T)
 	{
@@ -266,11 +278,13 @@ void SetPWM(Time * tPWMPtr, Speed * speedPtr, Mode * modePtr)
 	}
 }
 
-/*Function adjusts fan target speed based on error between 'measured' fan speed and 'target'
+/*
+  Function adjusts fan target speed based on error between 'measured' fan speed and 'target'
   fan speed and stores corrected target as new speed 'pid' in speed struct. Function uses
   predefined coefficients tuned to control this system specifically.
   Input: Pointer to speed struct of custom type Speed
-  Output: Void */
+  Output: Void 
+*/
 void PID(Speed * speedPtr)
 {
 	//Declare variable to store previous error calculated
@@ -294,14 +308,11 @@ void PID(Speed * speedPtr)
 	//Calculate total PID control component
 	int pidCtrl = (Kp * err) + (Ki * integ) + (Kd * deriv);
 
-	//Calculate new speed using PID control term
-	int pidSpeed = speedPtr -> target + pidCtrl;
-
-	//Validate target speed is within range of fan
-	pidCtrl = SpeedValidate(pidSpeed);
+	//Calculate new speed using PID control term and validate target speed is within range of fan
+	pidCtrl = SpeedValidate(speedPtr -> target + pidCtrl);
 
 	//Set pid speed
-	speedPtr -> pid = pidSpeed;
+	speedPtr -> pid = pidCtrl;
 
 	//Assign previous error values
 	pErr = err;

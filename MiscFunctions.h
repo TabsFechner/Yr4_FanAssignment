@@ -5,16 +5,15 @@
 
 #include "CustomTypes.h"
 
-//Declare function that inverts value of isOn if Key_0 has just been pressed.
+//Function inverts system ON status if Key_0 has just been pressed.
+//output units. Function used by several timers specific to that purpose.
 void CheckOn(Mode *);
 
-//Declare function that takes two input timestamps and returns calculated time value in desired output units
-//Units: 1 = min, 0 = s, -3 = ms, -6 = us
+//Function takes two input timestamps and returns calculated time value in desired 
 void GetTime(Time *, int);
 
-//Function sets mode value based on input value from switch 1.
-//Mode 0: PID Control
-//Mode 1: Temperature Control
+//Function sets system mode based on current position of switches 0 and 1. Mode 
+//also used to indicate system ON status.
 void CheckMode(Mode *, Time *);
 
 #endif

@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+//Declare necessary pointers to interface ports. Defined in main.c
 extern volatile int * Counter;
 extern volatile int * Hexa;
 extern volatile int * Hexb;
@@ -26,6 +27,7 @@ extern volatile int * Hexb;
 */
 void DisplayManage(Time *  tDisplayPtr, Speed * speedPtr, Mode * modePtr)
 {
+	//Initialise necessary members of display struct with zero values
 	static Display display = { .nTime = 0, .scrl = 0, .iDisp = 0 };
 
 	//Check for time interval since last HEX display
@@ -34,15 +36,17 @@ void DisplayManage(Time *  tDisplayPtr, Speed * speedPtr, Mode * modePtr)
 	//Calculate time between to display timer readings
 	GetTime(tDisplayPtr, 0);
 
+	//Function called to update display information content
 	UpdateInfo(&display, tDisplayPtr, modePtr, speedPtr);
 
+	//Function called to update display
 	UpdateDisplay(&display, tDisplayPtr, modePtr, speedPtr);
 }
 
 /*
-  Function updates information to be displayed on HEX displays, either if the system mode has 
-  recently changed or if there has been no user input for over 2 minutes, by initiating the 
-  scrolling text setup.
+  Function updates information content to be displayed on HEX displays, either if the system 
+  mode has recently changed or if there has been no user input for over 2 minutes, by 
+  initiating the scrolling text setup.
   Input: Pointer to display information struct of custom type Display
   Input: Pointer to display timer struct of custom type Time
   Input: Pointer to mode struct of custom type Mode
@@ -51,12 +55,10 @@ void DisplayManage(Time *  tDisplayPtr, Speed * speedPtr, Mode * modePtr)
 */
 void UpdateInfo(Display * displayPtr, Time * tDisplayPtr, Mode * modePtr, Speed * speedPtr)
 {
-	//Check for two conditions that trigger scrolling text to be updated
-
 	//Condition 1: Mode has been changed by user
 	if (modePtr -> changed)
 	{
-		//Pass infoStr char array as compiler automatically converts into pointer to first element
+		//Call function to setup scrolling display
 		ScrollSetup(displayPtr, modePtr, speedPtr);
 
 		//Set current character index to zero
@@ -137,6 +139,7 @@ void UpdateDisplay(Display * displayPtr, Time * tDisplayPtr, Mode * modePtr, Spe
 	}
 	else
 	{
+		//If not running scrolling display, display live fan speed information
 		switch(modePtr -> mode)
 		{
 			case 0:
@@ -150,20 +153,24 @@ void UpdateDisplay(Display * displayPtr, Time * tDisplayPtr, Mode * modePtr, Spe
 				break;
 
 			case 2:
+				d1 = CharEncoder('E');
+				d2 = CharEncoder('R');
 				//Implement temp
 				break;
 		}
 
+		//Write signal to display HexB to indicate current mode
 		*Hexb = d2 | (d1 << 8);
 
 		displayValue = speedPtr -> measured;
 
+		//Write signal to display HexA to display live fan speed
 		*Hexa = MultiDigitEncoder(displayValue);
 	}
 }
 
 /*
-  Function takes mult digit value and encodes into active segments for HEX display HexA.
+  Function takes multi digit value and encodes into active segments for HEX display HexA.
   Input: Integer value of multiple digit fan speed
   Output: Binary value used to write to display output
 */
@@ -360,7 +367,7 @@ void ClearDisplay()
   Input: Pointer to speed struct of custom type Speed
   Output: void 
 */
-//TODO: move this to be within update info Function
+//TODO move this to be within update info Function
 void ScrollSetup(Display * displayPtr, Mode * modePtr, Speed * speedPtr)
 {
 	ClearDisplay();
@@ -393,26 +400,27 @@ void GetInfoString(Display * displayPtr, Mode * modePtr, Speed * speedPtr)
 	//Store concatenated string in array depending on current mode
 	switch (modePtr -> mode)
 	{
+		//Fan off
 		case 9:
 			strcpy(displayPtr -> infoStr, modePtr -> description);
 			break;
 
+		//Open-loop control
 		case 0:
 			sprintf(array, "%d      ", speedPtr -> target);
 			strcpy(displayPtr -> infoStr, modePtr -> description);
 			strcat(displayPtr -> infoStr, array);
 			break;
+
+		//Closed-loop control
 		case 1:
 			sprintf(array, "%d      ", speedPtr -> pid);
 			strcpy(displayPtr -> infoStr, modePtr -> description);
 			strcat(displayPtr -> infoStr, array);
 			break;
+
+		//Temperature control
 		case 2:
-			sprintf(array, "%d      ", speedPtr -> temp);
-			strcpy(displayPtr -> infoStr, modePtr -> description);
-			strcat(displayPtr -> infoStr, array);
-			break;
-		case 3:
 			sprintf(array, "%d      ", speedPtr -> temp);
 			strcpy(displayPtr -> infoStr, modePtr -> description);
 			strcat(displayPtr -> infoStr, array);
@@ -430,6 +438,7 @@ void GetJuliet(Display * displayPtr)
 {
 	int x = rand();
 
+	//Generate random number between 0 and 8
 	switch (x % 9)
 	{
 		case 0:
@@ -456,6 +465,9 @@ void GetJuliet(Display * displayPtr)
 		case 7:
 			strcpy(displayPtr -> infoStr, "LOVE IS A SMOKE MADE WITH THE FUME OF SIGHS      ");
 			break;
+		default:
+			strcpy(displayPtr -> infoStr, "WISELY AND SLOW THEY STUMBLE THAT RUN FAST      ");
+			break;
 	}
 }
 
@@ -472,6 +484,7 @@ void ScrollRun(Display * displayPtr, Time * tDisplayPtr, volatile int * Counter)
 {
 	static int seg;
 
+	//Scroll display after given time period to ensure readability
 	if (tDisplayPtr -> time > 0.2)
 	{
 		//Encode current character to 7 segment signal
