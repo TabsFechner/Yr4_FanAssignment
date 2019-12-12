@@ -40,7 +40,6 @@ typedef struct Time_t{
 typedef struct Display_t{
 	int iDisp;
 	int scrl;
-	int scrlMode;
 	int nTime;
 	char infoStr[100];
 }Display;

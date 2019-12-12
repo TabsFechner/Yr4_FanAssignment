@@ -31,9 +31,6 @@ void ClearDisplay(void);
 
 //----------------------------------------------------- Scrolling Functions -----------------------------------------------------//
 
-//Function gets display information string based on scrolling purpose.
-void ScrollSetup(Display *, Mode *, Speed *);
-
 //Function generates information string based on current system mode description and 
 //fan speed.
 void GetInfoString(Display *, Mode *, Speed *);

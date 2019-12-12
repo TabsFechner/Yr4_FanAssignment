@@ -36,6 +36,12 @@ void DisplayManage(Time *  tDisplayPtr, Speed * speedPtr, Mode * modePtr)
 	//Calculate time between to display timer readings
 	GetTime(tDisplayPtr, 0);
 
+	//Interrupt scroll if fan speed target changed
+	if (speedPtr -> demand != 0)
+	{
+		display.scrl = 0;
+	}
+
 	//Function called to update display information content
 	UpdateInfo(&display, tDisplayPtr, modePtr, speedPtr);
 
@@ -58,8 +64,10 @@ void UpdateInfo(Display * displayPtr, Time * tDisplayPtr, Mode * modePtr, Speed 
 	//Condition 1: Mode has been changed by user
 	if (modePtr -> changed)
 	{
-		//Call function to setup scrolling display
-		ScrollSetup(displayPtr, modePtr, speedPtr);
+		ClearDisplay();
+
+		//Generate information string based on fan speed and mode
+		GetInfoString(displayPtr, modePtr, speedPtr);
 
 		//Set current character index to zero
 		displayPtr -> iDisp = 0;
@@ -80,8 +88,10 @@ void UpdateInfo(Display * displayPtr, Time * tDisplayPtr, Mode * modePtr, Speed 
 		//If 120s reached
 		if (displayPtr -> nTime > 5)
 		{
-			//Set up scrolling display
-			ScrollSetup(displayPtr, modePtr, speedPtr);
+			ClearDisplay();
+
+			//Generate string based on random extract from Romeo and Juliet
+			GetJuliet(displayPtr);
 
 			//Set current character index to zero
 			displayPtr -> iDisp = 0;
@@ -359,30 +369,6 @@ void ClearDisplay()
 }
 
 //----------------------------------------------- Display Functions: Scrolling Display --------------------------------------------------//
-
-/*
-  Function gets display information string based on scrolling purpose.
-  Input: Pointer to display information struct of custom type Display
-  Input: Pointer to mode struct of custom type Mode
-  Input: Pointer to speed struct of custom type Speed
-  Output: void 
-*/
-//TODO move this to be within update info Function
-void ScrollSetup(Display * displayPtr, Mode * modePtr, Speed * speedPtr)
-{
-	ClearDisplay();
-
-	if (displayPtr -> scrlMode == 0)
-	{
-		//Generate information string based on fan speed and mode
-		GetInfoString(displayPtr, modePtr, speedPtr);
-	}
-	if (displayPtr -> scrlMode == 1)
-	{
-		//Generate string based on random extract from Romeo and Juliet
-		GetJuliet(displayPtr);
-	}
-}
 
 /*
   Function generates information string based on current system mode description and 
