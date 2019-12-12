@@ -1,25 +1,33 @@
+
 #include "MiscFunctions.h"
 #include "CustomTypes.h"
 
 #include <string.h>
 #include <stdio.h>
 
+//Declare necessary pointers to interface ports. Defined in main.c
 extern volatile int * Switches;
 extern volatile int * Counter;
 extern volatile int * Keys;
 
-//Function takes two input timestamps and returns calculated time value in desired output units
-//Units: 1 = min, 0 = s, -3 = ms, -6 = us
+/*
+  Function takes two input timestamps and returns calculated time value in desired 
+  output units. Function used by several timers specific to that purpose.
+  Units: 1 = min, 0 = s, -3 = ms, -6 = us
+  Input: Pointer to a specific timer struct of custom type time
+  Input: Integer value used to indicate desired ouput units
+  Output: Void
+*/
 void GetTime(Time * timerPtr, int units)
 {
-	//Define counter limit of 32-bits and counter frequency of 50M Hz
+	//Define counter limit and counter frequency of 50M Hz
 	static int counterLim = 0x7FFFFFFF;
 	static int counterFreq = 50000000;
 
 	static int noCounts, countsA, countsB;
 
-	//Calculate number of counts between the two input timestamps
-	//Check for counter sign change
+	//Calculate number of counts between the two input timestamps, handling all 
+	//combinations of timestamps across counter boundaries
 	if (timerPtr -> t1 > timerPtr -> t2)
 	{
 		countsA = counterLim - timerPtr -> t1;
@@ -52,7 +60,11 @@ void GetTime(Time * timerPtr, int units)
 	}
 }
 
-//Function inverts value of isOn if Key_0 has just been pressed.
+/*
+  Function inverts system ON status if Key_0 has just been pressed.
+  Input: Pointer to mode struct of custom type Mode
+  Output: Void
+*/
 void CheckOn(Mode * modePtr)
 {
 	static int prev;
@@ -71,9 +83,17 @@ void CheckOn(Mode * modePtr)
 	prev = key_0;
 }
 
-//Function sets mode value based on input value from switch 0 and switch 1
+/*
+  Function sets system mode based on current position of switches 0 and 1. Mode 
+  also used to indicate system ON status.
+  Input: Pointer to mode struct of custom type Mode
+  Input: Pointer to display timer struct of custom type Time
+  Output: Void
+*/
 void CheckMode(Mode * modePtr, Time * tDisplayPtr)
 {
+	//Initialise previous sum as value that will ensure correct system startup 
+	//procedure
 	static int pSum = 100;
 	static int pOn = 1;
 
@@ -83,7 +103,7 @@ void CheckMode(Mode * modePtr, Time * tDisplayPtr)
 		//Mask input from switches input to select only switch 0 and 1 and sum
 		int sum =  *Switches & 0x3;
 
-		//Check if mode or ON status has just changed
+		//Check if mode or ON status has recently changed
 		if (sum != pSum || pOn != modePtr -> isOn)
 		{
 			modePtr -> changed = 1;
@@ -134,7 +154,7 @@ void CheckMode(Mode * modePtr, Time * tDisplayPtr)
 	}
 	else
 	{
-		//Check is ON status has just changed
+		//Check if system ON status has just changed
 		if (pOn == 1)
 		{
 			modePtr -> changed = 1;
@@ -144,7 +164,7 @@ void CheckMode(Mode * modePtr, Time * tDisplayPtr)
 			modePtr -> changed = 0;
 		}
 
-		//Set mode to -1 if system is off
+		//Set mode to indicate system is off
 		modePtr -> mode = 9;
 
 		//Define info string to be displayed when system is off

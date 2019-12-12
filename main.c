@@ -4,12 +4,12 @@
  *       Start Date:	25.11.2019
  *  Submission Date:	12.12.2019
  *
+ *	Program used to control a single 3-pin fan, taking user input through various periphery devices
+ *  on either the FPGA or the extension board. Two modes of operation implement either open-loop or
+ *  closed-loop PID control of the fan speed. HEX displays used to display information about the fan
+ *  and system.
+ *
  */
-
-//TODO Insert some error catches
-//TODO Rewrite Update display function
-//TODO Update comments for GetTime function
-//TODO Write nice descriptions of each function
 
 //---------------------------------------------------------- Setup --------------------------------------------------------//
 
@@ -64,16 +64,14 @@ int main(int argc, char** argv)
 
 	//------------------------- Initialise other custom structs -------------------------
 
-	//Define struct of custom type speed to store fan speed data and
+	//Declare struct of custom type speed to store fan speed data and
 	//initialise fan speed target as zero
-	static Speed speed;
-	speed.target = 0;
-	speed.measured = 0;
+	static Speed speed = { .target = 0, .measured = 0 };
 
-	//Define stuct of custom type Mode to store current mode and mode change flag
-	static Mode mode;
-	mode.isOn = 0;
-	mode.changed = 1;
+	//Declare and initialise stuct of custom type Mode
+	static Mode mode = { .isOn = 0, .changed = 1 };
+
+	//------------------------ Initialise Data Direction Register ------------------------
 
 	//Initialise data direction register for GPIOA and set pin 3 of GPIO
 	//to be output
@@ -84,7 +82,7 @@ int main(int argc, char** argv)
 
 	while (1)
 	{
-		//Check on-off
+		//Check system on-off
 		if (mode.isOn)
 		{
 			//Check for current mode
@@ -113,7 +111,7 @@ int main(int argc, char** argv)
 			SetPWM(&tPWM, &speed, &mode);
 
 			//Check current display status and update display accordingly
-			UpdateDisplay(&tDisplay, &speed, &mode);
+			DisplayManage(&tDisplay, &speed, &mode);
 
 			CheckOn(&mode);
 		}
@@ -126,7 +124,7 @@ int main(int argc, char** argv)
 			*GPIOA = 0x0;
 
 			//Check current display status and update display accordingly
-			UpdateDisplay(&tDisplay, &speed, &mode);
+			DisplayManage(&tDisplay, &speed, &mode);
 
 			CheckOn(&mode);
 		}

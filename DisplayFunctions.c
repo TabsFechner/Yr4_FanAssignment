@@ -11,20 +11,24 @@
 #include <string.h>
 #include <stdlib.h>
 
+//Declare necessary pointers to interface ports. Defined in main.c
 extern volatile int * Counter;
 extern volatile int * Hexa;
 extern volatile int * Hexb;
 
 //----------------------------------------------------- Display Functions -----------------------------------------------------//
 
-//Define function that updates diplay based on current status of display and recent system changes
-void UpdateDisplay(Time *  tDisplayPtr, Speed * speedPtr, Mode * modePtr)
+/*
+  Function prepares and calls the two major functions used to update the HEX display. 
+  Input: Pointer to display timer struct of custom type Time
+  Input: Pointer to speed struct of custom type Speed
+  Input: Pointer to mode struct of custom type Mode
+  Output: void 
+*/
+void DisplayManage(Time *  tDisplayPtr, Speed * speedPtr, Mode * modePtr)
 {
-	static int nTime = 0;
-	static int scrl = 0;
-	static int iDisp = 0;
-	static char infoStr[100];
-	int displayValue, d1, d2;
+	//Initialise necessary members of display struct with zero values
+	static Display display = { .nTime = 0, .scrl = 0, .iDisp = 0 };
 
 	//Check for time interval since last HEX display
 	tDisplayPtr -> t2 = * Counter;
@@ -32,57 +36,101 @@ void UpdateDisplay(Time *  tDisplayPtr, Speed * speedPtr, Mode * modePtr)
 	//Calculate time between to display timer readings
 	GetTime(tDisplayPtr, 0);
 
-	//Check for two conditions that initiate scrolling text
+	//Interrupt scroll if fan speed target changed
+	if (speedPtr -> demand != 0)
+	{
+		display.scrl = 0;
+	}
+
+	//Function called to update display information content
+	UpdateInfo(&display, tDisplayPtr, modePtr, speedPtr);
+
+	//Function called to update display
+	UpdateDisplay(&display, tDisplayPtr, modePtr, speedPtr);
+}
+
+/*
+  Function updates information content to be displayed on HEX displays, either if the system 
+  mode has recently changed or if there has been no user input for over 2 minutes, by 
+  initiating the scrolling text setup.
+  Input: Pointer to display information struct of custom type Display
+  Input: Pointer to display timer struct of custom type Time
+  Input: Pointer to mode struct of custom type Mode
+  Input: Pointer to speed struct of custom type Speed
+  Output: void 
+*/
+void UpdateInfo(Display * displayPtr, Time * tDisplayPtr, Mode * modePtr, Speed * speedPtr)
+{
 	//Condition 1: Mode has been changed by user
 	if (modePtr -> changed)
 	{
-		//Pass infoStr char array as compiler automatically converts into pointer to first element
-		ScrollSetup(0, infoStr, modePtr, speedPtr);
+		ClearDisplay();
+
+		//Generate information string based on fan speed and mode
+		GetInfoString(displayPtr, modePtr, speedPtr);
 
 		//Set current character index to zero
-		iDisp = 0;
+		displayPtr -> iDisp = 0;
 
 		//Set scrolling status to true
-		scrl = 1;
+		displayPtr -> scrl = 1;
 	}
+
 	//Condition 2: No user input for over 20 s
 	else if (tDisplayPtr -> time > 20)
 	{
 		//Increment 20s count
-		nTime++;
+		displayPtr -> nTime++;
 
 		//Restart timer
 		tDisplayPtr -> t1 = * Counter;
 
 		//If 120s reached
-		if (nTime > 5)
+		if (displayPtr -> nTime > 5)
 		{
-			//Set up scrolling display
-			ScrollSetup(1, infoStr, modePtr, speedPtr);
+			ClearDisplay();
+
+			//Generate string based on random extract from Romeo and Juliet
+			GetJuliet(displayPtr);
 
 			//Set current character index to zero
-			iDisp = 0;
+			displayPtr -> iDisp = 0;
 
 			//Set scrolling status to true
-			scrl = 1;
+			displayPtr -> scrl = 1;
 
 			//Reset 20s counter to zero since no input for 120s condition has been met
-			nTime = 0;
+			displayPtr -> nTime = 0;
 		}
 	}
+}
+
+/*
+  Function updates the display once the necessary display information changes have been made. If
+  no scrolling text is to be displayed, the display output will be set to show live information 
+  about the system mode and fan speed.
+  Input: Pointer to display information struct of custom type Display
+  Input: Pointer to display timer struct of custom type Time
+  Input: Pointer to mode struct of custom type Mode
+  Input: Pointer to speed struct of custom type Speed
+  Output: void 
+*/
+void UpdateDisplay(Display * displayPtr, Time * tDisplayPtr, Mode * modePtr, Speed * speedPtr)
+{
+	int displayValue, d1, d2;
 
 	//Check for scrolling status and update display accordingly
-	if (scrl)
+	if (displayPtr -> scrl)
 	{
 		//Check for current character index being greater than length of info string
-		if (iDisp > strlen(infoStr))
+		if (displayPtr -> iDisp > strlen(displayPtr -> infoStr))
 		{
 			if (modePtr -> isOn)
 			{
 				ClearDisplay();
 
 				//Set scrolling to false
-				scrl = 0;
+				displayPtr -> scrl = 0;
 
 				//Restart timer
 				tDisplayPtr -> t1 = * Counter;
@@ -90,17 +138,18 @@ void UpdateDisplay(Time *  tDisplayPtr, Speed * speedPtr, Mode * modePtr)
 			else
 			{
 				//Set current character index to zero
-				iDisp = 0;
+				displayPtr -> iDisp = 0;
 			}
 		}
 		else
 		{
 			//Update scrolling display
-			ScrollRun(tDisplayPtr, &iDisp, Counter, infoStr);
+			ScrollRun(displayPtr, tDisplayPtr, Counter);
 		}
 	}
 	else
 	{
+		//If not running scrolling display, display live fan speed information
 		switch(modePtr -> mode)
 		{
 			case 0:
@@ -114,19 +163,27 @@ void UpdateDisplay(Time *  tDisplayPtr, Speed * speedPtr, Mode * modePtr)
 				break;
 
 			case 2:
+				d1 = CharEncoder('E');
+				d2 = CharEncoder('R');
 				//Implement temp
 				break;
 		}
 
+		//Write signal to display HexB to indicate current mode
 		*Hexb = d2 | (d1 << 8);
 
 		displayValue = speedPtr -> measured;
 
+		//Write signal to display HexA to display live fan speed
 		*Hexa = MultiDigitEncoder(displayValue);
 	}
 }
 
-//Define function that takes multi digit value and encodes into active segments for hex display HexA
+/*
+  Function takes multi digit value and encodes into active segments for HEX display HexA.
+  Input: Integer value of multiple digit fan speed
+  Output: Binary value used to write to display output
+*/
 int MultiDigitEncoder (int value)
 {
 	//Define empty display value to return
@@ -172,7 +229,12 @@ int MultiDigitEncoder (int value)
 	return returnValue;
 }
 
-//Define function that takes char from info string and encodes into active segments for hex display
+/*
+  Function takes character from display information string and encodes into active segments
+  for HEX display.
+  Input: Character value of single letter or number
+  Output: Binary value used to write to display output
+*/
 int CharEncoder(char ch)
 {
 	int seg;
@@ -298,7 +360,7 @@ int CharEncoder(char ch)
 	return seg;
 }
 
-//Define function that simply clears the hex display
+//Define function that simply clears the entire HEX display
 void ClearDisplay()
 {
 	//Clear Hex display
@@ -308,25 +370,15 @@ void ClearDisplay()
 
 //----------------------------------------------- Display Functions: Scrolling Display --------------------------------------------------//
 
-//Define function that sets up scrolling of new string
-void ScrollSetup(int scrollOp, char * infoStrPtr, Mode * modePtr, Speed * speedPtr)
-{
-	ClearDisplay();
-
-	if (scrollOp == 0)
-	{
-		//Generate information string based on fan speed and mode
-		GetInfoString(infoStrPtr, modePtr, speedPtr);
-	}
-	if (scrollOp == 1)
-	{
-		//Generate string based on random extract from Romeo and Juliet
-		GetJuliet(infoStrPtr);
-	}
-}
-
-//Define function that generates information string depending on current mode set.
-void GetInfoString(char * infoStrPtr, Mode * modePtr, Speed * speedPtr)
+/*
+  Function generates information string based on current system mode description and 
+  fan speed.
+  Input: Pointer to display information struct of custom type Display
+  Input: Pointer to mode struct of custom type Mode
+  Input: Pointer to speed struct of custom type Speed
+  Output: void 
+*/
+void GetInfoString(Display * displayPtr, Mode * modePtr, Speed * speedPtr)
 {
 	//Declare array
 	char array[32];
@@ -334,89 +386,112 @@ void GetInfoString(char * infoStrPtr, Mode * modePtr, Speed * speedPtr)
 	//Store concatenated string in array depending on current mode
 	switch (modePtr -> mode)
 	{
+		//Fan off
 		case 9:
-			strcpy(infoStrPtr, modePtr -> description);
+			strcpy(displayPtr -> infoStr, modePtr -> description);
 			break;
 
+		//Open-loop control
 		case 0:
 			sprintf(array, "%d      ", speedPtr -> target);
-			strcpy(infoStrPtr, modePtr -> description);
-			strcat(infoStrPtr, array);
+			strcpy(displayPtr -> infoStr, modePtr -> description);
+			strcat(displayPtr -> infoStr, array);
 			break;
+
+		//Closed-loop control
 		case 1:
 			sprintf(array, "%d      ", speedPtr -> pid);
-			strcpy(infoStrPtr, modePtr -> description);
-			strcat(infoStrPtr, array);
+			strcpy(displayPtr -> infoStr, modePtr -> description);
+			strcat(displayPtr -> infoStr, array);
 			break;
+
+		//Temperature control
 		case 2:
 			sprintf(array, "%d      ", speedPtr -> temp);
-			strcpy(infoStrPtr, modePtr -> description);
-			strcat(infoStrPtr, array);
-			break;
-		case 3:
-			sprintf(array, "%d      ", speedPtr -> temp);
-			strcpy(infoStrPtr, modePtr -> description);
-			strcat(infoStrPtr, array);
+			strcpy(displayPtr -> infoStr, modePtr -> description);
+			strcat(displayPtr -> infoStr, array);
 			break;
 	}
 }
 
-//Define function that randomly selects Romeo and Juliet extract and stores in infoStr array
-void GetJuliet(char * infoStrPtr)
+/*
+  Function randomly selects 1 of 8 Romeo and Juliet extract to be used as display 
+  information string.
+  Input: Pointer to display information struct of custom type Display
+  Output: void 
+*/
+void GetJuliet(Display * displayPtr)
 {
 	int x = rand();
 
+	//Generate random number between 0 and 8
 	switch (x % 9)
 	{
 		case 0:
-			strcpy(infoStrPtr, "THESE VIOLENT DELIGHTS HAVE VIOLENT ENDS AND IN THEIR TRIUMP DIE LIKE FIRE AND POWDER      ");
+			strcpy(displayPtr -> infoStr, "THESE VIOLENT DELIGHTS HAVE VIOLENT ENDS AND IN THEIR TRIUMP DIE LIKE FIRE AND POWDER      ");
 			break;
 		case 1:
-			strcpy(infoStrPtr, "MY BOUNTY IS AS BOUNDLESS AS THE SEA MY LOVE AS DEEP      ");
+			strcpy(displayPtr -> infoStr, "MY BOUNTY IS AS BOUNDLESS AS THE SEA MY LOVE AS DEEP      ");
 			break;
 		case 2:
-			strcpy(infoStrPtr, "THUS WITH A KISS I DIE      ");
+			strcpy(displayPtr -> infoStr, "THUS WITH A KISS I DIE      ");
 			break;
 		case 3:
-			strcpy(infoStrPtr, "PARTING IS SUCH SWEET SORROW THAT I SHALL SAY GOOD NIGHT TILL IT BE MORROW      ");
+			strcpy(displayPtr -> infoStr, "PARTING IS SUCH SWEET SORROW THAT I SHALL SAY GOOD NIGHT TILL IT BE MORROW      ");
 			break;
 		case 4:
-			strcpy(infoStrPtr, "DO NOT SWEAR BY THE MOON FOR SHE CHANGES CONSTANTLY THEN YOUR LOVE WOULD ALSO CHANGE      ");
+			strcpy(displayPtr -> infoStr, "DO NOT SWEAR BY THE MOON FOR SHE CHANGES CONSTANTLY THEN YOUR LOVE WOULD ALSO CHANGE      ");
 			break;
 		case 5:
-			strcpy(infoStrPtr, "DO YOU BITE YOUR THUMB AT US SIR      ");
+			strcpy(displayPtr -> infoStr, "DO YOU BITE YOUR THUMB AT US SIR      ");
 			break;
 		case 6:
-			strcpy(infoStrPtr, "O SERPENT HEART HID WITH A FLOWERING FACE      ");
+			strcpy(displayPtr -> infoStr, "O SERPENT HEART HID WITH A FLOWERING FACE      ");
 			break;
 		case 7:
-			strcpy(infoStrPtr, "LOVE IS A SMOKE MADE WITH THE FUME OF SIGHS      ");
+			strcpy(displayPtr -> infoStr, "LOVE IS A SMOKE MADE WITH THE FUME OF SIGHS      ");
+			break;
+		default:
+			strcpy(displayPtr -> infoStr, "WISELY AND SLOW THEY STUMBLE THAT RUN FAST      ");
 			break;
 	}
 }
 
-//Define function that writes scrolling text to hex displays
-void ScrollRun(Time * tDisplayPtr, int * iDispPtr, volatile int * Counter, char * infoStrPtr)
+/*
+  Function, after a given time period, encodes current character from display information 
+  string and decodes into output for HEX display. After calling a function to scroll 
+  display output, the current character index is incremented.
+  Input: Pointer to display information struct of custom type Display
+  Input: Pointer to display timer struct of custom type Time
+  Input: Pointer to system counter, used to restart display timer
+  Output: void
+*/
+void ScrollRun(Display * displayPtr, Time * tDisplayPtr, volatile int * Counter)
 {
 	static int seg;
 
+	//Scroll display after given time period to ensure readability
 	if (tDisplayPtr -> time > 0.2)
 	{
 		//Encode current character to 7 segment signal
-		seg = CharEncoder(*(infoStrPtr+(* iDispPtr)));
+		seg = CharEncoder(*(displayPtr -> infoStr + displayPtr -> iDisp));
 
 		//Shift character into scrolling display
 		ScrollOut(seg);
 
 		//Increment info string character index
-		(* iDispPtr)++;
+		(displayPtr -> iDisp)++;
 
 		//Restart timer
 		tDisplayPtr -> t1 = * Counter;
 	}
 }
 
-//Define function that writes encoded display message to HEX displays
+/*
+  Function shifts display along and writes new character into display.
+  Input: Decoded binary value for HEX display output
+  Output: void
+*/
 void ScrollOut(int hexValue)
 {
 	//Define empty display value to return
